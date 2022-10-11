@@ -58,6 +58,8 @@
 #include "diy_common_tool.h"
 #include <QFile>
 #include <QDir>
+#include <QTimer>
+#include <QFileDialog>
 
 QT_USE_NAMESPACE
 
@@ -103,6 +105,14 @@ private slots:
 
     void on_disconnButton_clicked();
 
+    void on_clearButton_clicked();
+
+    void on_calibrationButton_clicked();
+
+    void on_choosePathButton_clicked();
+
+    void on_allDevcheckBox_stateChanged(int arg1);
+
 private:
     int adapterFromUserSelection() const;
     int currentAdapterIndex = 0;
@@ -132,11 +142,19 @@ private:
     const char* m_file_name_apx = "_all";
     QString m_data_file_pth_str, m_redundant_file_path_str;
     QFile m_file, m_valid_data_file;
+    bool m_single_light_write = false;
+    bool m_calibrating = false;
+    const char* m_calibration_file_name_apx = "校准";
+    const char* m_data_file_type_str = ".txt";
+    bool m_all_dev_scan = false;
+
+    QTimer m_write_done_timer;
 
     void init_write_data();
     void read_notify();
     void write_data_done_notify();
     void restart_work();
+    void send_data_to_device();
 
 public:
 };

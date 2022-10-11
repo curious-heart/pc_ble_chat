@@ -120,6 +120,8 @@ Chat::Chat(QWidget *parent)
     init_write_data();
     connect(this, &Chat::write_data_done_sig,
             this, &Chat::write_data_done_handle);
+    connect(&m_write_done_timer, &QTimer::timeout,
+           this, &Chat::write_data_done_notify);
 
     m_data_file_pth_str = "../" + QString(m_data_dir_rel_name);
     m_redundant_file_path_str = m_data_file_pth_str + "/"
@@ -129,7 +131,18 @@ Chat::Chat(QWidget *parent)
                            localAdapters.at(currentAdapterIndex).address();
 
     ui->sendButton->setEnabled(false);
+    ui->calibrationButton->setEnabled(false);
     ui->disconnButton->setEnabled(false);
+    if(m_all_dev_scan)
+    {
+        ui->allDevcheckBox->setCheckState(Qt::Unchecked);
+    }
+    else
+    {
+        ui->allDevcheckBox->setCheckState(Qt::Unchecked);
+    }
+
+    ui->storePathDisplay->setText(m_data_file_pth_str);
 }
 
 Chat::~Chat()
@@ -210,9 +223,27 @@ void Chat::clientDisconnected()
 //! [Connect to remote service]
 void Chat::connectClicked()
 {
+    /*
+    unsigned char crc8;
+    for(auto &l : m_write_data_list)
+    {
+        crc8 = diy_crc8_8210(l, m_write_data_len - 1);
+        qDebug() << QByteHexString(l) << "---" << QString("%1").arg(crc8, 2, 16, QLatin1Char('0')).toUpper();
+    }
+    return;
+    */
+    /*
+    QString qhex_str = "01020A0B";
+    QByteArray qbyte_arr = qhex_str.toUtf8();
+    QByteArray q_data = QByteArray::fromHex(qbyte_arr);
+    qDebug() << qhex_str << ":" << QByteHexString(q_data);
+    return;
+    */
+
     ui->connectButton->setEnabled(false);
     ui->disconnButton->setEnabled(false);
     ui->sendButton->setEnabled(false);
+    ui->calibrationButton->setEnabled(false);
 
     // scan for services
     /*const QBluetoothAddress adapter = localAdapters.isEmpty() ?
@@ -232,6 +263,7 @@ void Chat::connectClicked()
         ui->connectButton->setEnabled(true);
         return;
     }
+    m_remoteSelector->search_all_dev(m_all_dev_scan);
 #ifdef Q_OS_ANDROID
     if (QtAndroid::androidSdkVersion() >= 23)
         //remoteSelector.startDiscovery(QBluetoothUuid(reverseUuid));
@@ -291,6 +323,7 @@ qDebug() << "Start client";
         ui->connectButton->setEnabled(false);
         ui->disconnButton->setEnabled(true);
         ui->sendButton->setEnabled(true);
+        ui->calibrationButton->setEnabled(true);
     }
     else
     {
@@ -301,6 +334,19 @@ qDebug() << "Start client";
 
 //! [sendClicked]
 void Chat::sendClicked()
+{
+    m_calibrating = false;
+    send_data_to_device();
+}
+
+void Chat::on_calibrationButton_clicked()
+{
+    m_calibrating = true;
+    QMessageBox::information(nullptr, "提示：", "请将设备放置在无遮挡的位置进行校准");
+    send_data_to_device();
+}
+
+void Chat::send_data_to_device()
 {
     if(m_tx_char->getCharacteristic().isValid())
     {
@@ -328,10 +374,17 @@ void Chat::sendClicked()
         QString dtms_str = diy_curr_date_time_str_ms();
         QString data_file_name
                 = m_redundant_file_path_str + "/"
-                  + dtms_str + m_file_name_apx + ".txt";
+                  + dtms_str + m_file_name_apx;
         QString valid_data_file_name
                 = m_data_file_pth_str + "/"
-                  + dtms_str + ".txt";
+                  + dtms_str;
+        if(m_calibrating)
+        {
+            data_file_name +=  m_calibration_file_name_apx;
+            valid_data_file_name += m_calibration_file_name_apx;
+        }
+        data_file_name += m_data_file_type_str;
+        valid_data_file_name += m_data_file_type_str;
         m_file.setFileName(data_file_name);
         m_valid_data_file.setFileName(valid_data_file_name);
         m_file_write_ready = m_file.open(QIODevice::WriteOnly);
@@ -357,13 +410,35 @@ void Chat::sendClicked()
         ui->connectButton->setEnabled(false);
         ui->disconnButton->setEnabled(false);
         ui->sendButton->setEnabled(false);
-        for(int i=0; i < m_light_num; i++)
+        ui->calibrationButton->setEnabled(false);
+
+        if (ui->sendText->text().length() >0)
         {
-            //read_notify();
+            m_single_light_write = true;
+            QString send_txt = ui->sendText->text();
+            qDebug() << "Ori txt:" << send_txt;
+            send_txt.remove(' ');
+            qDebug() << "Space removed:" << send_txt;
+            QByteArray send_data = QByteArray::fromHex(send_txt.toUtf8());
+            qDebug() << "hex data:" << QByteHexString(send_data);
+            quint8 data_crc8 = diy_crc8_8210(send_data, send_data.length());
+            send_data.append(data_crc8);
+            qDebug() << "hex data with crc:" << QByteHexString(send_data);
             m_service->service()->writeCharacteristic(m_tx_char->getCharacteristic(),
-                                                      m_write_data_list[i]);
-            //read_notify();
+                                                      send_data);
             QThread::msleep(500);
+        }
+        else
+        {
+            m_single_light_write = false;
+            for(int i=0; i < m_light_num; i++)
+            {
+                //read_notify();
+                m_service->service()->writeCharacteristic(m_tx_char->getCharacteristic(),
+                                                          m_write_data_list[i]);
+                //read_notify();
+                QThread::msleep(500);
+            }
         }
     }
     else
@@ -434,11 +509,13 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
         }
     }
     if(value.startsWith(m_valid_data_flag)
-            && ((unsigned char)value[m_light_idx_pos]) == (unsigned char)m_light_num)
+            && (m_single_light_write
+                || (((unsigned char)value[m_light_idx_pos]) == (unsigned char)m_light_num)))
     {
         m_file.flush();
         m_valid_data_file.flush();
-        write_data_done_notify();
+        //write_data_done_notify();
+        m_write_done_timer.start(500);
     }
 }
 
@@ -453,11 +530,14 @@ void Chat::write_data_done_handle()
     ui->connectButton->setEnabled(false);
     ui->disconnButton->setEnabled(true);
     ui->sendButton->setEnabled(true);
-    /*if(m_file_write_ready)
+    ui->calibrationButton->setEnabled(true);
+    m_write_done_timer.stop();
+    if(m_file_write_ready)
     {
         m_file.close();
+        m_valid_data_file.close();
         m_file_write_ready = false;
-    }*/
+    }
 }
 
 void Chat::on_chat_textChanged()
@@ -474,6 +554,7 @@ void Chat::restart_work()
     m_tx_char = nullptr;
 
     ui->sendButton->setEnabled(false);
+    ui->calibrationButton->setEnabled(false);
     ui->connectButton->setEnabled(true);
     ui->disconnButton->setEnabled(false);
 }
@@ -557,3 +638,44 @@ void Chat::init_write_data()
         m_write_data_list.append(QByteArray((const char*)write_data[i], m_write_data_len));
     }
 }
+
+void Chat::on_clearButton_clicked()
+{
+    ui->chat->clear();
+}
+
+void Chat::on_choosePathButton_clicked()
+{
+    QString directory = QFileDialog::getExistingDirectory(this,tr("储存位置选择"),QDir::currentPath());
+    directory.replace("\\","/"); //双斜杠转换单斜杠
+    if(directory.isEmpty())
+    {
+        QString hint_str;
+        hint_str = QString("未选择合适的文件夹，数据文件将存储在下面的位置：../")
+                    + m_data_dir_rel_name;
+    }
+    else
+    {
+        qDebug() << "选择完毕！";
+        m_data_file_pth_str = directory;
+        m_redundant_file_path_str = m_data_file_pth_str + "/"
+                            + QString(m_redundant_dir_rel_name);
+        m_dir_ready = false;
+    }
+    ui->storePathDisplay->setText(m_data_file_pth_str);
+    qDebug() << "存储位置：" << directory;
+    qDebug() << "m_data_file_pth_str：" << m_data_file_pth_str ;
+}
+
+void Chat::on_allDevcheckBox_stateChanged(int arg1)
+{
+    if(Qt::Checked == ui->allDevcheckBox->checkState())
+    {
+        m_all_dev_scan = true;
+    }
+    else
+    {
+        m_all_dev_scan = false;
+    }
+}
+

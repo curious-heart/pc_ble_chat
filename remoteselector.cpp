@@ -92,7 +92,7 @@ void RemoteSelector::startDiscovery(const QBluetoothUuid &uuid)
         m_dev_discoveryAgent->stop();
 
     ui->remoteDevices->clear();
-
+    m_target_device_found = false;
     m_dev_discoveryAgent->start(QBluetoothDeviceDiscoveryAgent::LowEnergyMethod);
     //m_dev_discoveryAgent->start();
 }
@@ -128,7 +128,7 @@ void RemoteSelector::deviceFound(const QBluetoothDeviceInfo &deviceInfo)
     dev_name = deviceInfo.name();
     dev_addr = deviceInfo.address().toString();
 
-    if(m_intersted_dev_addr_str == dev_addr)
+    if(m_all_dev_scan || (m_intersted_dev_addr_str == dev_addr))
     {
         QListWidgetItem *item =
             new QListWidgetItem(QString::fromLatin1("%1 %2").arg(dev_name,
@@ -136,7 +136,11 @@ void RemoteSelector::deviceFound(const QBluetoothDeviceInfo &deviceInfo)
         m_discoveredDevices.insert(item, deviceInfo);
         ui->remoteDevices->addItem(item);
         m_target_device_found = true;
-        m_dev_discoveryAgent->stop();
+
+        if(!m_all_dev_scan)
+        {
+            m_dev_discoveryAgent->stop();
+        }
     }
 }
 
@@ -156,6 +160,10 @@ void RemoteSelector::dev_discoveryFinished()
         result_str = "没有发现设备";
     }
     QMessageBox::information(nullptr, title_str, result_str);
+    if(!m_target_device_found)
+    {
+        reject();
+    }
 }
 
 void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
@@ -402,6 +410,11 @@ void RemoteSelector::clear_ble_resource()
     qDeleteAll(m_services);
     m_services.clear();
     m_service = nullptr;
+}
+
+void RemoteSelector::search_all_dev(bool all_dev)
+{
+    m_all_dev_scan = all_dev;
 }
 /*--------------------------------------------------------------------------------*/
 /*Below functions is not used currentlly.*/

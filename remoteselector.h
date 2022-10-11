@@ -100,6 +100,8 @@ public:
                 = QBluetoothUuid(QString("6e400002-b5a3-f393-e0a9-e50e24dcca9e"));
     const QBluetoothUuid m_intersted_char_rx_uuid
                 = QBluetoothUuid(QString("6e400003-b5a3-f393-e0a9-e50e24dcca9e"));
+    void search_all_dev(bool all_dev);
+
 private:
     Ui::RemoteSelector *ui;
 
@@ -114,6 +116,8 @@ private:
     QList<QObject *> m_characteristics;
     CharacteristicInfo *m_intersted_char_rx = nullptr;
     CharacteristicInfo *m_intersted_char_tx = nullptr;
+
+    bool m_all_dev_scan = false;
 
 private:
     void recogonize_char(QLowEnergyService * intersted_srv);

@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<intersted_dev_list>
+    <single_dev name = "VSPK" addr = "27:A5:D2:1E:67:DD"/>
+    <single_dev name = "VPSK"/>
+    <single_dev addr= "65:A2:47:AA:1F:A7"/>
+    <single_dev name = "HUAWEI Mouse" addr = "C2:57:63:FE:05:DD"/>
+    <group_devs name_part = "oo" />
+</intersted_dev_lis>
