@@ -135,7 +135,7 @@ Chat::Chat(QWidget *parent)
     ui->disconnButton->setEnabled(false);
     if(m_all_dev_scan)
     {
-        ui->allDevcheckBox->setCheckState(Qt::Unchecked);
+        ui->allDevcheckBox->setCheckState(Qt::Checked);
     }
     else
     {
@@ -143,6 +143,18 @@ Chat::Chat(QWidget *parent)
     }
 
     ui->storePathDisplay->setText(m_data_file_pth_str);
+
+    if(m_only_rec_valid_data)
+    {
+        ui->onlyValidDatacheckBox->setCheckState(Qt::Checked);
+    }
+    else
+    {
+        ui->onlyValidDatacheckBox->setCheckState(Qt::Unchecked);
+    }
+    m_data_no = ui->numberTextEdit->toPlainText();
+    ui->currFileradioButton->setChecked(true);
+    ui->currFolderradioButton->setChecked(false);
 }
 
 Chat::~Chat()
@@ -153,7 +165,10 @@ Chat::~Chat()
 
     if(m_file_write_ready)
     {
-        m_file.close();
+        if(!m_only_rec_valid_data)
+        {
+            m_file.close();
+        }
         m_valid_data_file.close();
         m_file_write_ready = false;
     }
@@ -348,26 +363,53 @@ void Chat::on_calibrationButton_clicked()
 
 void Chat::send_data_to_device()
 {
+    QString curr_no, err_str = "";
+    curr_no = ui->numberTextEdit->toPlainText();
+    if(curr_no.isEmpty())
+    {
+        err_str = "编号为空，请确认是否继续！";
+    }
+    else if(m_data_no == curr_no)
+    {
+        err_str = "编号没有更新，请确认是否继续！";
+    }
+    if(!err_str.isEmpty())
+    {
+        QMessageBox::StandardButton sel;
+        sel = QMessageBox::question(nullptr, "？？？", err_str);
+        if(QMessageBox::No == sel)
+        {
+            return;
+        }
+    }
+
+    m_data_no = curr_no;
     if(m_tx_char->getCharacteristic().isValid())
     {
         if(!m_dir_ready)
         {
-            bool mkdir_ret = false;
-            QDir data_dir(m_data_file_pth_str);
-            mkdir_ret = data_dir.mkpath(m_redundant_dir_rel_name);
-
-            if(!mkdir_ret)
+            if(!m_only_rec_valid_data)
             {
-                QMessageBox::critical(nullptr, "!!!",
-                                      "Make dir \"" + m_redundant_file_path_str
-                                      + "\" fail!");
-                return;
+                bool mkdir_ret = false;
+                QDir data_dir(m_data_file_pth_str);
+                mkdir_ret = data_dir.mkpath(m_redundant_dir_rel_name);
+
+                if(!mkdir_ret)
+                {
+                    QMessageBox::critical(nullptr, "!!!",
+                                          "Make dir \"" + m_redundant_file_path_str
+                                          + "\" fail!");
+                    return;
+                }
+                m_dir_ready = true;
             }
-            m_dir_ready = true;
         }
         if(m_file_write_ready)
         {
-            m_file.close();
+            if(!m_only_rec_valid_data)
+            {
+                m_file.close();
+            }
             m_valid_data_file.close();
             m_file_write_ready = false;
         }
@@ -375,24 +417,34 @@ void Chat::send_data_to_device()
         QString data_file_name
                 = m_redundant_file_path_str + "/"
                   + dtms_str + m_file_name_apx;
+        m_current_valid_data_file_name = m_data_no + "---" + dtms_str;
         QString valid_data_file_name
-                = m_data_file_pth_str + "/"
-                  + dtms_str;
+                = m_data_file_pth_str + "/" + m_current_valid_data_file_name;
         if(m_calibrating)
         {
             data_file_name +=  m_calibration_file_name_apx;
             valid_data_file_name += m_calibration_file_name_apx;
+            m_current_valid_data_file_name += m_calibration_file_name_apx;
         }
         data_file_name += m_data_file_type_str;
         valid_data_file_name += m_data_file_type_str;
-        m_file.setFileName(data_file_name);
-        m_valid_data_file.setFileName(valid_data_file_name);
-        m_file_write_ready = m_file.open(QIODevice::WriteOnly);
+        m_current_valid_data_file_name += m_data_file_type_str;
+
+        m_file_write_ready = true;
+        if(!m_only_rec_valid_data)
+        {
+            m_file.setFileName(data_file_name);
+            m_file_write_ready = m_file.open(QIODevice::WriteOnly);
+        }
         if(m_file_write_ready)
         {
+            m_valid_data_file.setFileName(valid_data_file_name);
             if(!(m_file_write_ready = m_valid_data_file.open(QIODevice::WriteOnly)))
             {
-                m_file.close();
+                if(!m_only_rec_valid_data)
+                {
+                    m_file.close();
+                }
                 QMessageBox::critical(nullptr, "!!!",
                                       "Create file \"" + valid_data_file_name
                                       + "\" fail!");
@@ -501,7 +553,10 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
     if(m_file_write_ready)
     {
         utf8_str = str + "\r\n";
-        m_file.write(utf8_str.toUtf8());
+        if(!m_only_rec_valid_data)
+        {
+            m_file.write(utf8_str.toUtf8());
+        }
         if(value.startsWith(m_valid_data_flag))
         {
             m_valid_data_file.write(utf8_str.toUtf8());
@@ -512,7 +567,10 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
             && (m_single_light_write
                 || (((unsigned char)value[m_light_idx_pos]) == (unsigned char)m_light_num)))
     {
-        m_file.flush();
+        if(!m_only_rec_valid_data)
+        {
+            m_file.flush();
+        }
         m_valid_data_file.flush();
         //write_data_done_notify();
         m_write_done_timer.start(500);
@@ -534,9 +592,13 @@ void Chat::write_data_done_handle()
     m_write_done_timer.stop();
     if(m_file_write_ready)
     {
-        m_file.close();
+        if(!m_only_rec_valid_data)
+        {
+            m_file.close();
+        }
         m_valid_data_file.close();
         m_file_write_ready = false;
+        ui->currFileNameLabel->setText(m_current_valid_data_file_name);
     }
 }
 
@@ -564,7 +626,10 @@ void Chat::on_disconnButton_clicked()
 
     if(m_file_write_ready)
     {
-        m_file.close();
+        if(!m_only_rec_valid_data)
+        {
+            m_file.close();
+        }
         m_valid_data_file.close();
         m_file_write_ready = false;
     }
@@ -677,5 +742,67 @@ void Chat::on_allDevcheckBox_stateChanged(int arg1)
     {
         m_all_dev_scan = false;
     }
+}
+
+void Chat::on_onlyValidDatacheckBox_stateChanged(int arg1)
+{
+    if(Qt::Checked == ui->onlyValidDatacheckBox->checkState())
+    {
+        m_only_rec_valid_data = true;
+    }
+    else
+    {
+        m_only_rec_valid_data = false;
+    }
+}
+
+
+void Chat::on_fileVisualButton_clicked()
+{
+    if(m_current_valid_data_file_name.isEmpty())
+    {
+        QMessageBox::warning(nullptr, "!!!", "没有可用文件");
+        return;
+    }
+
+    QString file_pos;
+    if(ui->currFileradioButton->isChecked())
+    {
+        file_pos = m_data_file_pth_str + "/" + m_current_valid_data_file_name;
+    }
+    else if(ui->currFolderradioButton->isChecked())
+    {
+        file_pos = m_data_file_pth_str;
+    }
+    else
+    {
+        QMessageBox::warning(nullptr, "!!!", "请选择显示文件还是文件夹内容");
+        return;
+    }
+    QStringList parms;
+    parms.append(file_pos);
+
+    qDebug() << "cmd line:" << m_visual_exe_fpn;
+    for(auto &s : parms)
+    {
+        qDebug() << s;
+    }
+    if(QProcess::startDetached(m_visual_exe_fpn, parms))
+    {
+        QMessageBox::information(nullptr, "OK", "请稍等...");
+    }
+    else
+    {
+        QMessageBox::critical(nullptr, "！！！", "显示失败……");
+    }
+}
+
+
+void Chat::on_currFileradioButton_clicked()
+{
+}
+
+void Chat::on_folderradioButton_clicked()
+{
 }
 

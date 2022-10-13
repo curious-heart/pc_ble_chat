@@ -33,5 +33,8 @@ win32-msvc*: {
     QMAKE_CXXFLAGS *= /utf-8
 }
 
+VERSION = 2.0
+DEFINES += APP_VERSION=\\\"$$VERSION\\\"
+
 target.path = $$[QT_INSTALL_EXAMPLES]/bluetooth/btchat
 INSTALLS += target

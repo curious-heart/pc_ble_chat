@@ -60,6 +60,7 @@
 #include <QDir>
 #include <QTimer>
 #include <QFileDialog>
+#include <QProcess>
 
 QT_USE_NAMESPACE
 
@@ -113,6 +114,14 @@ private slots:
 
     void on_allDevcheckBox_stateChanged(int arg1);
 
+    void on_onlyValidDatacheckBox_stateChanged(int arg1);
+
+    void on_fileVisualButton_clicked();
+
+    void on_currFileradioButton_clicked();
+
+    void on_folderradioButton_clicked();
+
 private:
     int adapterFromUserSelection() const;
     int currentAdapterIndex = 0;
@@ -147,9 +156,13 @@ private:
     const char* m_calibration_file_name_apx = "校准";
     const char* m_data_file_type_str = ".txt";
     bool m_all_dev_scan = false;
+    bool m_only_rec_valid_data = true;
+    QString m_current_valid_data_file_name;
+    QString m_data_no;
 
     QTimer m_write_done_timer;
 
+    const char* m_visual_exe_fpn = "../vway_data_visual/dist/vway_data_visual/vway_data_visual.exe";
     void init_write_data();
     void read_notify();
     void write_data_done_notify();

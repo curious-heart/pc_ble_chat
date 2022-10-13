@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>463</width>
-    <height>394</height>
+    <height>505</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,8 +16,8 @@
   <widget class="QPushButton" name="quitButton">
    <property name="geometry">
     <rect>
-     <x>280</x>
-     <y>310</y>
+     <x>420</x>
+     <y>420</y>
      <width>41</width>
      <height>24</height>
     </rect>
@@ -179,7 +179,7 @@
    <property name="geometry">
     <rect>
      <x>10</x>
-     <y>339</y>
+     <y>450</y>
      <width>61</width>
      <height>16</height>
     </rect>
@@ -192,8 +192,8 @@
    <property name="geometry">
     <rect>
      <x>70</x>
-     <y>340</y>
-     <width>331</width>
+     <y>451</y>
+     <width>381</width>
      <height>41</height>
     </rect>
    </property>
@@ -213,20 +213,104 @@
     <bool>true</bool>
    </property>
   </widget>
-  <widget class="QCheckBox" name="allDevcheckBox">
+  <widget class="QWidget" name="layoutWidget">
    <property name="geometry">
     <rect>
-     <x>410</x>
+     <x>330</x>
      <y>340</y>
-     <width>51</width>
-     <height>51</height>
+     <width>130</width>
+     <height>56</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
+    <item>
+     <widget class="QCheckBox" name="onlyValidDatacheckBox">
+      <property name="text">
+       <string>仅记录
+有效数据</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QCheckBox" name="allDevcheckBox">
+      <property name="text">
+       <string>搜索
+所有
+设备</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QWidget" name="layoutWidget">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>340</y>
+     <width>191</width>
+     <height>72</height>
+    </rect>
+   </property>
+   <layout class="QHBoxLayout" name="horizontalLayout_3">
+    <item>
+     <widget class="QLabel" name="number_label">
+      <property name="text">
+       <string>对象
+编号</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPlainTextEdit" name="numberTextEdit"/>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QLabel" name="currFileNameLabel">
+   <property name="geometry">
+    <rect>
+     <x>10</x>
+     <y>420</y>
+     <width>201</width>
+     <height>16</height>
     </rect>
    </property>
    <property name="text">
-    <string>搜索
-所有
-设备</string>
+    <string>数据文件名</string>
    </property>
+  </widget>
+  <widget class="QWidget" name="">
+   <property name="geometry">
+    <rect>
+     <x>206</x>
+     <y>340</y>
+     <width>123</width>
+     <height>91</height>
+    </rect>
+   </property>
+   <layout class="QVBoxLayout" name="verticalLayout_3">
+    <item>
+     <widget class="QPushButton" name="fileVisualButton">
+      <property name="text">
+       <string>可视化显示数据</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QRadioButton" name="currFileradioButton">
+      <property name="text">
+       <string>显示当前文件数据</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QRadioButton" name="currFolderradioButton">
+      <property name="text">
+       <string>显示文件夹内所有
+文件数据</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
   </widget>
  </widget>
  <resources/>
