@@ -13,305 +13,245 @@
   <property name="windowTitle">
    <string>Bluetooth Chat</string>
   </property>
-  <widget class="QPushButton" name="quitButton">
-   <property name="geometry">
-    <rect>
-     <x>420</x>
-     <y>420</y>
-     <width>41</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>退出</string>
-   </property>
-  </widget>
-  <widget class="QLineEdit" name="sendText">
-   <property name="geometry">
-    <rect>
-     <x>110</x>
-     <y>280</y>
-     <width>271</width>
-     <height>23</height>
-    </rect>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="sendButton">
-   <property name="geometry">
-    <rect>
-     <x>391</x>
-     <y>280</y>
-     <width>61</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>采集数据</string>
-   </property>
-   <property name="default">
-    <bool>true</bool>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="connectButton">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>280</y>
-     <width>92</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="layoutDirection">
-    <enum>Qt::LeftToRight</enum>
-   </property>
-   <property name="text">
-    <string>搜索并连接设备</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="disconnButton">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>310</y>
-     <width>92</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="layoutDirection">
-    <enum>Qt::LeftToRight</enum>
-   </property>
-   <property name="text">
-    <string>断开设备连接</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="clearButton">
-   <property name="geometry">
-    <rect>
-     <x>390</x>
-     <y>310</y>
-     <width>61</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>清除数据</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="choosePathButton">
-   <property name="geometry">
-    <rect>
-     <x>110</x>
-     <y>310</y>
-     <width>80</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>选择存储位置</string>
-   </property>
-  </widget>
-  <widget class="QPushButton" name="calibrationButton">
-   <property name="geometry">
-    <rect>
-     <x>200</x>
-     <y>310</y>
-     <width>41</width>
-     <height>24</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>校准</string>
-   </property>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>11</x>
-     <y>12</y>
-     <width>441</width>
-     <height>266</height>
-    </rect>
-   </property>
-   <layout class="QVBoxLayout" name="verticalLayout_2">
-    <item>
-     <widget class="QGroupBox" name="localAdapterBox">
-      <property name="title">
-       <string>Local Bluetooth Adapter</string>
-      </property>
-      <property name="checkable">
-       <bool>false</bool>
-      </property>
-      <layout class="QVBoxLayout" name="verticalLayout">
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="0" column="0">
+    <layout class="QVBoxLayout" name="verticalLayout_4" stretch="15,3,1,1,1,1">
+     <item>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout">
+        <widget class="QGroupBox" name="localAdapterBox">
+         <property name="title">
+          <string>Local Bluetooth Adapter</string>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout">
+            <item>
+             <widget class="QRadioButton" name="firstAdapter">
+              <property name="text">
+               <string>Default</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QRadioButton" name="secondAdapter">
+              <property name="text">
+               <string/>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="chat">
+         <property name="focusPolicy">
+          <enum>Qt::NoFocus</enum>
+         </property>
+         <property name="verticalScrollBarPolicy">
+          <enum>Qt::ScrollBarAsNeeded</enum>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_4">
+       <item>
+        <widget class="QPushButton" name="connectButton">
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="text">
+          <string>搜索并连接设备</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLineEdit" name="sendText"/>
+       </item>
+       <item>
+        <widget class="QPushButton" name="sendButton">
+         <property name="text">
+          <string>采集数据</string>
+         </property>
+         <property name="default">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_5">
+       <item>
+        <widget class="QPushButton" name="disconnButton">
+         <property name="layoutDirection">
+          <enum>Qt::LeftToRight</enum>
+         </property>
+         <property name="text">
+          <string>断开设备连接</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="calibrationButton">
+         <property name="text">
+          <string>校准</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="clearButton">
+         <property name="text">
+          <string>清除数据</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="horizontalSpacer">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>40</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QPushButton" name="quitButton">
+         <property name="text">
+          <string>退出</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_8">
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_3">
          <item>
-          <widget class="QRadioButton" name="firstAdapter">
+          <widget class="QLabel" name="number_label">
            <property name="text">
-            <string>Default</string>
+            <string>对象
+编号</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QRadioButton" name="secondAdapter">
+          <widget class="QPlainTextEdit" name="numberTextEdit"/>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QPushButton" name="fileVisualButton">
            <property name="text">
-            <string/>
+            <string>可视化显示数据</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="currFileradioButton">
+           <property name="text">
+            <string>显示当前文件数据</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QRadioButton" name="currFolderradioButton">
+           <property name="text">
+            <string>显示文件夹内所有
+文件数据</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <item>
+          <widget class="QCheckBox" name="onlyValidDatacheckBox">
+           <property name="text">
+            <string>仅记录
+有效数据</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QCheckBox" name="allDevcheckBox">
+           <property name="text">
+            <string>搜索
+所有
+设备</string>
            </property>
           </widget>
          </item>
         </layout>
        </item>
       </layout>
-     </widget>
-    </item>
-    <item>
-     <widget class="QTextEdit" name="chat">
-      <property name="focusPolicy">
-       <enum>Qt::NoFocus</enum>
-      </property>
-      <property name="verticalScrollBarPolicy">
-       <enum>Qt::ScrollBarAsNeeded</enum>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QLabel" name="storePathLabel">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>450</y>
-     <width>61</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>存储位置：</string>
-   </property>
-  </widget>
-  <widget class="QLabel" name="storePathDisplay">
-   <property name="geometry">
-    <rect>
-     <x>70</x>
-     <y>451</y>
-     <width>381</width>
-     <height>41</height>
-    </rect>
-   </property>
-   <property name="sizePolicy">
-    <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
-     <horstretch>0</horstretch>
-     <verstretch>0</verstretch>
-    </sizepolicy>
-   </property>
-   <property name="text">
-    <string/>
-   </property>
-   <property name="alignment">
-    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
-   </property>
-   <property name="wordWrap">
-    <bool>true</bool>
-   </property>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>330</x>
-     <y>340</y>
-     <width>130</width>
-     <height>56</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_2">
-    <item>
-     <widget class="QCheckBox" name="onlyValidDatacheckBox">
-      <property name="text">
-       <string>仅记录
-有效数据</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QCheckBox" name="allDevcheckBox">
-      <property name="text">
-       <string>搜索
-所有
-设备</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QWidget" name="layoutWidget">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>340</y>
-     <width>191</width>
-     <height>72</height>
-    </rect>
-   </property>
-   <layout class="QHBoxLayout" name="horizontalLayout_3">
-    <item>
-     <widget class="QLabel" name="number_label">
-      <property name="text">
-       <string>对象
-编号</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QPlainTextEdit" name="numberTextEdit"/>
-    </item>
-   </layout>
-  </widget>
-  <widget class="QLabel" name="currFileNameLabel">
-   <property name="geometry">
-    <rect>
-     <x>10</x>
-     <y>420</y>
-     <width>201</width>
-     <height>16</height>
-    </rect>
-   </property>
-   <property name="text">
-    <string>数据文件名</string>
-   </property>
-  </widget>
-  <widget class="QWidget" name="">
-   <property name="geometry">
-    <rect>
-     <x>206</x>
-     <y>340</y>
-     <width>123</width>
-     <height>91</height>
-    </rect>
-   </property>
-   <layout class="QVBoxLayout" name="verticalLayout_3">
-    <item>
-     <widget class="QPushButton" name="fileVisualButton">
-      <property name="text">
-       <string>可视化显示数据</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QRadioButton" name="currFileradioButton">
-      <property name="text">
-       <string>显示当前文件数据</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="QRadioButton" name="currFolderradioButton">
-      <property name="text">
-       <string>显示文件夹内所有
-文件数据</string>
-      </property>
-     </widget>
-    </item>
-   </layout>
-  </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_7">
+       <item>
+        <widget class="QLabel" name="currFileNameLabel">
+         <property name="text">
+          <string>数据文件名</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="choosePathButton">
+         <property name="text">
+          <string>选择存储位置</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="horizontalLayout_6">
+       <item>
+        <widget class="QLabel" name="storePathLabel">
+         <property name="text">
+          <string>存储位置：</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="storePathDisplay">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+         </property>
+         <property name="wordWrap">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
  </widget>
  <resources/>
  <connections/>

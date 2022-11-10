@@ -1,7 +1,8 @@
 TEMPLATE = app
-TARGET = btchat
+#TARGET = btchat
+TARGET = skin_data_collector
 
-QT = core bluetooth widgets
+QT = core bluetooth widgets sql
 requires(qtConfig(listwidget))
 android: QT += androidextras
 
@@ -33,7 +34,7 @@ win32-msvc*: {
     QMAKE_CXXFLAGS *= /utf-8
 }
 
-VERSION = 2.0
+VERSION = 3.0
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 
 target.path = $$[QT_INSTALL_EXAMPLES]/bluetooth/btchat
