@@ -94,12 +94,20 @@ public:
     CharacteristicInfo* rx_char();
     CharacteristicInfo* tx_char();
     void scan_char();
+    /*
     const QString m_intersted_dev_addr_str = "27:A5:D2:1E:67:DD";
     const QString m_intrested_srv_uuid_str = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
     const QBluetoothUuid m_intersted_char_tx_uuid
                 = QBluetoothUuid(QString("6e400002-b5a3-f393-e0a9-e50e24dcca9e"));
     const QBluetoothUuid m_intersted_char_rx_uuid
                 = QBluetoothUuid(QString("6e400003-b5a3-f393-e0a9-e50e24dcca9e"));
+   */
+    const QString m_intersted_dev_addr_str = "1E:A2:CA:1E:67:DD";
+    const QString m_intrested_srv_uuid_str = "0000fff0-0000-1000-8000-00805f9b34fb";
+    const QBluetoothUuid m_intersted_char_tx_uuid
+                = QBluetoothUuid(QString("0000fff2-0000-1000-8000-00805f9b34fb"));
+    const QBluetoothUuid m_intersted_char_rx_uuid
+                = QBluetoothUuid(QString("0000fff1-0000-1000-8000-00805f9b34fb"));
     void search_all_dev(bool all_dev);
 
 private:

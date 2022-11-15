@@ -2,7 +2,7 @@ TEMPLATE = app
 #TARGET = btchat
 TARGET = skin_data_collector
 
-QT = core bluetooth widgets sql
+QT = core bluetooth widgets sql xml
 requires(qtConfig(listwidget))
 android: QT += androidextras
 
@@ -14,7 +14,9 @@ SOURCES = \
     remoteselector.cpp \
     chatserver.cpp \
     chatclient.cpp \
-    serviceinfo.cpp
+    serviceinfo.cpp \
+    sw_setting_parse.cpp \
+    types_and_defs.cpp
 
 HEADERS = \
     characteristicinfo.h \
@@ -23,7 +25,9 @@ HEADERS = \
     remoteselector.h \
     chatserver.h \
     chatclient.h \
-    serviceinfo.h
+    serviceinfo.h \
+    sw_setting_parse.h \
+    types_and_defs.h
 
 FORMS = \
     chat.ui \

@@ -66,6 +66,7 @@ public:
     QString getUuid() const;
     QString getName() const;
     QString getType() const;
+    QString getWholeUuid() const;
 
 Q_SIGNALS:
     void serviceChanged();

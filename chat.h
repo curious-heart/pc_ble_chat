@@ -61,6 +61,10 @@
 #include <QTimer>
 #include <QFileDialog>
 #include <QProcess>
+#include <QDomDocument>
+#include <QList>
+
+#include "sw_setting_parse.h"
 
 QT_USE_NAMESPACE
 
@@ -169,6 +173,8 @@ private:
     void restart_work();
     void send_data_to_device();
 
+    sw_settings_t m_sw_settings;
+    void load_sw_settings();
 public:
 };
 //! [declaration]

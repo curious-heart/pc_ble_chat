@@ -227,6 +227,7 @@ void RemoteSelector::addLowEnergyService(const QBluetoothUuid &serviceUuid)
     //A new service is discovered, now save it.
     auto serv = new ServiceInfo(service);
     m_services.append(serv);
+    qDebug() << "Find service:" << service->serviceUuid().toString();
 }
 
 void RemoteSelector::serviceScanDone()
@@ -242,8 +243,10 @@ void RemoteSelector::serviceScanDone()
         QString srv_name,srv_type,srv_uuid, srv_state;
         srv_name = serviceInfo->getName();
         srv_type = serviceInfo->getType();
-        srv_uuid = serviceInfo->getUuid();
+        //srv_uuid = serviceInfo->getUuid();
+        srv_uuid = serviceInfo->getWholeUuid();
         srv_state = QString("%1").arg((int)(serviceInfo->service()->state()));
+        qDebug() << "Check srv:" << srv_uuid;
         if(m_intrested_srv_uuid_str == srv_uuid)
         {
             //Intersted service is found, now display only it and clear other devices.
@@ -333,22 +336,8 @@ void RemoteSelector::serviceDetailsDiscovered(QLowEnergyService::ServiceState ne
     auto service = qobject_cast<QLowEnergyService *>(sender());
     if (!service)
         return;
-/*
-    const QList<QLowEnergyCharacteristic> chars = service->characteristics();
-    for (const QLowEnergyCharacteristic &ch : chars)
-    {
-        auto cInfo = new CharacteristicInfo(ch);
-        m_characteristics.append(cInfo);
-        if (ch.uuid() == m_intersted_char_rx_uuid)
-        {
-            m_intersted_char_rx = cInfo;
-        }
-        if (ch.uuid() == m_intersted_char_tx_uuid)
-        {
-            m_intersted_char_tx = cInfo;
-        }
-    }
-*/
+
+    qDebug() << "Now recogonize characteristic...";
     recogonize_char(service);
     QMessageBox::information(nullptr, "OK!", "连接建立完成，可以开始采集数据");
     accept();

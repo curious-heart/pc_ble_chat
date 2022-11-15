@@ -1,3 +1,6 @@
+#include <QRegExp>
+#include <QRegExpValidator>
+
 #include "diy_common_tool.h"
 
 QString QByteHexString(const QByteArray &qba)
@@ -16,6 +19,36 @@ QString diy_curr_date_time_str_ms()
 
     curr_date_time = QDateTime::currentDateTime();
     return curr_date_time.toString("yyyyMMdd-hhmmss-zzz");
+}
+
+bool isMacAddress(QString mac)
+{
+    QRegExp rx("^([A-Fa-f0-9]{2}[-,:]){5}[A-Fa-f0-9]{2}$");
+    QRegExpValidator v(rx, nullptr);
+    int pos = 0;
+    if(v.validate(mac, pos) == QValidator::Acceptable)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool isFullUUID(QString uuid)
+{
+    QRegExp rx("^[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}$");
+    QRegExpValidator v(rx, nullptr);
+    int pos =0;
+    if(v.validate(uuid, pos))
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 static const quint8 caCrc8Data_8540[256] = {

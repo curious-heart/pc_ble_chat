@@ -60,6 +60,8 @@
 #include <QMessageBox>
 #include <QThread>
 
+#include "types_and_defs.h"
+
 #ifdef Q_OS_ANDROID
 #include <QtAndroidExtras/QtAndroid>
 #endif
@@ -117,6 +119,9 @@ Chat::Chat(QWidget *parent)
     localName = QBluetoothLocalDevice().name();
     //! [Get local device name]
 
+    //try to load settings from xml.
+    load_sw_settings();
+
     init_write_data();
     connect(this, &Chat::write_data_done_sig,
             this, &Chat::write_data_done_handle);
@@ -155,6 +160,9 @@ Chat::Chat(QWidget *parent)
     m_data_no = ui->numberTextEdit->toPlainText();
     ui->currFileradioButton->setChecked(true);
     ui->currFolderradioButton->setChecked(false);
+
+    ui->skinTypeComboBox->addItems(g_skin_type);
+    ui->posComboBox->addItems(g_sample_pos);
 }
 
 Chat::~Chat()
@@ -172,6 +180,7 @@ Chat::~Chat()
         m_valid_data_file.close();
         m_file_write_ready = false;
     }
+    clear_loaded_settings(m_sw_settings);
 }
 
 //! [clientConnected clientDisconnected]
@@ -806,3 +815,32 @@ void Chat::on_folderradioButton_clicked()
 {
 }
 
+void Chat::load_sw_settings()
+{
+    bool ret;
+
+    ret = load_sw_settings_from_xml(m_sw_settings);
+    if(ret)
+    {/*settings xml file exists and valid, read its content.*/
+       qDebug() << "Load xml sucessfully.";
+    }
+    else
+    {/*settings xml file not usable, load default settings.*/
+        setting_ble_dev_info_t *ble_dev = new setting_ble_dev_info_t;
+        assert(ble_dev != nullptr);
+        ble_dev->addr = QString(g_def_ble_dev_addr);
+        ble_dev->srv_uuid = QString(g_def_ble_srv_uuid);
+        ble_dev->rx_char_uuid = QString(g_def_ble_rx_char_uuid);
+        ble_dev->tx_char_uuid = QString(g_def_ble_tx_char_uuid);
+        m_sw_settings.ble_dev_list.append(ble_dev);
+
+        m_sw_settings.db_info.srvr_addr = QString(g_def_db_srvr_addr);
+        m_sw_settings.db_info.srvr_port = g_def_db_srvr_port;
+        m_sw_settings.db_info.db_name = QString(g_def_db_name);
+        m_sw_settings.db_info.login_id = QString(g_def_db_login_id);
+        m_sw_settings.db_info.login_pwd = QString(g_def_db_login_pwd);
+        m_sw_settings.db_info.dbms_name = QString(g_def_dbms_name);
+        m_sw_settings.db_info.dbms_ver = QString(g_def_dbms_ver);
+        m_sw_settings.oth_settings.use_remote_db = g_def_use_remote_db;
+    }
+}

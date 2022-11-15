@@ -106,3 +106,13 @@ QString ServiceInfo::getUuid() const
 
     return uuid.toString().remove(QLatin1Char('{')).remove(QLatin1Char('}'));
 }
+
+QString ServiceInfo::getWholeUuid() const
+{
+    if (!m_service)
+        return QString();
+
+    const QBluetoothUuid uuid = m_service->serviceUuid();
+
+    return uuid.toString().remove(QLatin1Char('{')).remove(QLatin1Char('}'));
+}
