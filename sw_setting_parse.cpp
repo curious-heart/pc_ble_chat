@@ -107,7 +107,8 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
             //validation of dev_info
             if(check_setting_device_info(dev_info))
             {
-                loaded.ble_dev_list.append(dev_info);
+                //loaded.ble_dev_list.append(dev_info);
+                loaded.ble_dev_list.insert(dev_info->addr, dev_info);
                 dev_empty_flag = false;
             }
             else
@@ -246,6 +247,14 @@ bool load_sw_settings_from_xml(sw_settings_t &loaded)
 
 void clear_loaded_settings(sw_settings_t &loaded)
 {
-    qDeleteAll(loaded.ble_dev_list.begin(), loaded.ble_dev_list.end());
+    QMap<QString, setting_ble_dev_info_t*>::iterator it
+                                            = loaded.ble_dev_list.begin();
+    while(it != loaded.ble_dev_list.end())
+    {
+        delete it.value();
+        ++it;
+    }
+
+    //qDeleteAll(loaded.ble_dev_list.begin(), loaded.ble_dev_list.end());
     loaded.ble_dev_list.clear();
 }

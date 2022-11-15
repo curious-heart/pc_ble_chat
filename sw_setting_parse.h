@@ -82,7 +82,8 @@ public:
 typedef class _sw_settings_t
 {
 public:
-    QList<setting_ble_dev_info_t*> ble_dev_list;
+    //QList<setting_ble_dev_info_t*> ble_dev_list;
+    QMap<QString, setting_ble_dev_info_t*> ble_dev_list;
     setting_db_info_t db_info;
     setting_oth_t oth_settings;
 
@@ -94,7 +95,14 @@ public:
     }
     ~_sw_settings_t()
     {
-        qDeleteAll(ble_dev_list.begin(), ble_dev_list.end());
+        QMap<QString, setting_ble_dev_info_t*>::iterator it
+                                                = ble_dev_list.begin();
+        while(it != ble_dev_list.end())
+        {
+            delete it.value();
+            ++it;
+        }
+        //qDeleteAll(ble_dev_list.values().begin(), ble_dev_list.end());
         ble_dev_list.clear();
     }
 }sw_settings_t;

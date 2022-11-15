@@ -56,8 +56,10 @@
 
 QT_USE_NAMESPACE
 
-RemoteSelector::RemoteSelector(const QBluetoothAddress &localAdapter, QWidget *parent)
-    :   QDialog(parent), ui(new Ui::RemoteSelector)
+RemoteSelector::RemoteSelector(const QBluetoothAddress &localAdapter,
+                           const QMap<QString, setting_ble_dev_info_t*> & cfg_dev_list,
+                           QWidget *parent)
+    :   QDialog(parent), ui(new Ui::RemoteSelector), m_intersted_devs(cfg_dev_list)
 {
     ui->setupUi(this);
     ui->ScanServiceBtn->setEnabled(false);
@@ -92,7 +94,8 @@ void RemoteSelector::startDiscovery(const QBluetoothUuid &uuid)
         m_dev_discoveryAgent->stop();
 
     ui->remoteDevices->clear();
-    m_target_device_found = false;
+    //m_target_device_found = nullptr; //false;
+    m_target_dev_setting_info = nullptr;
     m_dev_discoveryAgent->start(QBluetoothDeviceDiscoveryAgent::LowEnergyMethod);
     //m_dev_discoveryAgent->start();
 }
@@ -124,31 +127,44 @@ CharacteristicInfo * RemoteSelector::tx_char()
 void RemoteSelector::deviceFound(const QBluetoothDeviceInfo &deviceInfo)
 {
     QString dev_name, dev_addr;
+    setting_ble_dev_info_t * setting_info;
 
     dev_name = deviceInfo.name();
     dev_addr = deviceInfo.address().toString();
-
-    if(m_all_dev_scan || (m_intersted_dev_addr_str == dev_addr))
+    setting_info = m_intersted_devs.value(dev_addr, nullptr);
+    //if(m_all_dev_scan || (m_intersted_dev_addr_str == dev_addr))
+    if(m_all_dev_scan || setting_info != nullptr)
     {
+        QString ind;
+        if(setting_info != nullptr)
+        {
+            ind = "**";
+        }
+        else
+        {
+            ind = "";
+        }
         QListWidgetItem *item =
-            new QListWidgetItem(QString::fromLatin1("%1 %2").arg(dev_name,
-                                                             dev_addr));
+            new QListWidgetItem(QString::fromLatin1("%1 %2 %3").arg(ind,
+                                                                    dev_name,
+                                                                    dev_addr));
         m_discoveredDevices.insert(item, deviceInfo);
         ui->remoteDevices->addItem(item);
-        m_target_device_found = true;
 
+        /*
         if(!m_all_dev_scan)
         {
             m_dev_discoveryAgent->stop();
-        }
+        }*/
     }
 }
 
 void RemoteSelector::dev_discoveryFinished()
 {
     QString title_str, result_str;
-
-    if(m_target_device_found)
+    int cnt = m_discoveredDevices.count();
+    //if(m_target_device_found)
+    if(cnt > 0)
     {
         ui->status->setText(QString::fromUtf8("请双击需要连接的设备:"));
         title_str = "OK!";
@@ -160,7 +176,8 @@ void RemoteSelector::dev_discoveryFinished()
         result_str = "没有发现设备";
     }
     QMessageBox::information(nullptr, title_str, result_str);
-    if(!m_target_device_found)
+    //if(!m_target_device_found)
+    if(cnt <= 0)
     {
         reject();
     }
@@ -171,11 +188,26 @@ void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
     qDebug() << "got click" << item->text();
 
     QString dev_name, dev_address;
+
     m_device = m_discoveredDevices.value(item);
     if (m_dev_discoveryAgent->isActive())
         m_dev_discoveryAgent->stop();
     dev_name = m_device.name();
     dev_address = m_device.address().toString();
+
+    m_target_dev_setting_info = m_intersted_devs.value(dev_address, nullptr);
+    if(nullptr == m_target_dev_setting_info)
+    {
+        QMessageBox::information(nullptr, "!!!", "不是有效设备!");
+        return;
+    }
+
+    m_intersted_dev_addr_str = m_target_dev_setting_info->addr;
+    m_intrested_srv_uuid_str = m_target_dev_setting_info->srv_uuid;
+    m_intersted_char_tx_uuid
+            = QBluetoothUuid(m_target_dev_setting_info->tx_char_uuid);
+    m_intersted_char_rx_uuid
+            = QBluetoothUuid(m_target_dev_setting_info->rx_char_uuid);
 
     clear_ble_resource();
 

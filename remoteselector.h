@@ -52,7 +52,7 @@
 #define REMOTESELECTOR_H
 
 #include <QtWidgets/qdialog.h>
-
+#include <QList>
 //#include <QtBluetooth/qbluetoothaddress.h>
 //#include <QtBluetooth/qbluetoothserviceinfo.h>
 //#include <QtBluetooth/qbluetoothuuid.h>
@@ -65,7 +65,7 @@
 #include <QLowEnergyController>
 #include "serviceinfo.h"
 #include "characteristicinfo.h"
-
+#include "sw_setting_parse.h"
 QT_FORWARD_DECLARE_CLASS(QBluetoothServiceDiscoveryAgent)
 QT_FORWARD_DECLARE_CLASS(QListWidgetItem)
 
@@ -84,7 +84,9 @@ class RemoteSelector : public QDialog
     Q_OBJECT
 
 public:
-    explicit RemoteSelector(const QBluetoothAddress &localAdapter, QWidget *parent = nullptr);
+    explicit RemoteSelector(const QBluetoothAddress &localAdapter,
+                    const QMap<QString, setting_ble_dev_info_t*> & cfg_dev_list,
+                    QWidget *parent = nullptr);
     ~RemoteSelector();
 
     void startDiscovery(const QBluetoothUuid &uuid);
@@ -102,12 +104,12 @@ public:
     const QBluetoothUuid m_intersted_char_rx_uuid
                 = QBluetoothUuid(QString("6e400003-b5a3-f393-e0a9-e50e24dcca9e"));
    */
-    const QString m_intersted_dev_addr_str = "1E:A2:CA:1E:67:DD";
-    const QString m_intrested_srv_uuid_str = "0000fff0-0000-1000-8000-00805f9b34fb";
-    const QBluetoothUuid m_intersted_char_tx_uuid
-                = QBluetoothUuid(QString("0000fff2-0000-1000-8000-00805f9b34fb"));
-    const QBluetoothUuid m_intersted_char_rx_uuid
-                = QBluetoothUuid(QString("0000fff1-0000-1000-8000-00805f9b34fb"));
+    QString m_intersted_dev_addr_str;// = "1E:A2:CA:1E:67:DD";
+    QString m_intrested_srv_uuid_str; // = "0000fff0-0000-1000-8000-00805f9b34fb";
+    QBluetoothUuid m_intersted_char_tx_uuid;
+                //= QBluetoothUuid(QString("0000fff2-0000-1000-8000-00805f9b34fb"));
+    QBluetoothUuid m_intersted_char_rx_uuid;
+                //= QBluetoothUuid(QString("0000fff1-0000-1000-8000-00805f9b34fb"));
     void search_all_dev(bool all_dev);
 
 private:
@@ -116,7 +118,11 @@ private:
     QBluetoothDeviceDiscoveryAgent *m_dev_discoveryAgent; //LLLL++++
     QMap<QListWidgetItem *, QBluetoothDeviceInfo> m_discoveredDevices;//LLLL++++
     QBluetoothDeviceInfo m_device;
-    bool m_target_device_found = false;
+    //bool m_target_device_found = false;
+    //setting_ble_dev_info_t * m_target_device_found = nullptr;
+    /*point to one of items in m_intersted_devs, corresponding to the one user
+      selected from device-scan result*/
+    setting_ble_dev_info_t * m_target_dev_setting_info = nullptr;
     QLowEnergyController *controller = nullptr;
     QList<QObject *> m_services;
     ServiceInfo * m_service = nullptr;
@@ -127,6 +133,8 @@ private:
 
     bool m_all_dev_scan = false;
 
+    /*intersted device list from settings xml file.*/
+    const QMap<QString, setting_ble_dev_info_t*> & m_intersted_devs;
 private:
     void recogonize_char(QLowEnergyService * intersted_srv);
     QString format_dev_info_str(const QBluetoothDeviceInfo * dev);

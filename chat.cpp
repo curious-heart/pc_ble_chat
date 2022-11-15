@@ -280,7 +280,7 @@ void Chat::connectClicked()
         delete m_remoteSelector;
     }
 
-    m_remoteSelector = new RemoteSelector(m_adapter);
+    m_remoteSelector = new RemoteSelector(m_adapter, m_sw_settings.ble_dev_list);
     if(nullptr == m_remoteSelector)
     {
         QMessageBox::critical(nullptr, "Error!", "remoteSelector NULL");
@@ -832,7 +832,7 @@ void Chat::load_sw_settings()
         ble_dev->srv_uuid = QString(g_def_ble_srv_uuid);
         ble_dev->rx_char_uuid = QString(g_def_ble_rx_char_uuid);
         ble_dev->tx_char_uuid = QString(g_def_ble_tx_char_uuid);
-        m_sw_settings.ble_dev_list.append(ble_dev);
+        m_sw_settings.ble_dev_list.insert(ble_dev->addr, ble_dev);
 
         m_sw_settings.db_info.srvr_addr = QString(g_def_db_srvr_addr);
         m_sw_settings.db_info.srvr_port = g_def_db_srvr_port;
