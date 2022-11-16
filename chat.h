@@ -174,7 +174,6 @@ private:
     void send_data_to_device();
 
     sw_settings_t m_sw_settings;
-    void load_sw_settings();
 public:
 };
 //! [declaration]

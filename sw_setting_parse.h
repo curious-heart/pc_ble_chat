@@ -12,21 +12,33 @@ public:
     QString addr;
     QString srv_uuid;
     QString rx_char_uuid, tx_char_uuid;
+    QList<int> lambda_list;
 
     _ble_dev_info_t()
+    {
+        clear();
+    }
+    ~_ble_dev_info_t()
     {
         clear();
     }
     void clear()
     {
         addr = srv_uuid = rx_char_uuid = tx_char_uuid = QString();
+        lambda_list.clear();
     }
     void log_print()
     {
        qDebug() << "dev addr: " << addr
                 << "dev srv_uuid: " << srv_uuid
                 << "dev rx_char_uuid: " << rx_char_uuid
-                << "dev tx_char_uuid: " << tx_char_uuid;
+                << "dev tx_char_uuid: " << tx_char_uuid << "\n";
+       qDebug() << "dev lambda_list: ";
+       for(auto &s: lambda_list)
+       {
+           qDebug() << (int)s << ",";
+       }
+       qDebug() << "\n";
     }
 }setting_ble_dev_info_t;
 
@@ -40,6 +52,10 @@ public:
     QString dbms_name, dbms_ver;
 
     _db_info_t()
+    {
+        clear();
+    }
+    ~_db_info_t()
     {
         clear();
     }
@@ -69,6 +85,10 @@ public:
     {
         clear();
     }
+    ~_oth_settings_t()
+    {
+        clear();
+    }
     void clear()
     {
         use_remote_db = true;
@@ -82,7 +102,6 @@ public:
 typedef class _sw_settings_t
 {
 public:
-    //QList<setting_ble_dev_info_t*> ble_dev_list;
     QMap<QString, setting_ble_dev_info_t*> ble_dev_list;
     setting_db_info_t db_info;
     setting_oth_t oth_settings;
@@ -102,11 +121,11 @@ public:
             delete it.value();
             ++it;
         }
-        //qDeleteAll(ble_dev_list.values().begin(), ble_dev_list.end());
         ble_dev_list.clear();
     }
 }sw_settings_t;
 
-bool load_sw_settings_from_xml(sw_settings_t &loaded);
+typedef QMap<QString, bool> str_bool_map_t;
+void load_sw_settings(sw_settings_t &sw_s);
 void clear_loaded_settings(sw_settings_t &loaded);
 #endif // SW_SETTING_PARSE_H
