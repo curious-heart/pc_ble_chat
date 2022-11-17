@@ -5,6 +5,7 @@
 #include "sw_setting_parse.h"
 #include "types_and_defs.h"
 #include "diy_common_tool.h"
+#include "logger.h"
 
 static inline QString ble_dev_list_elem() { return QStringLiteral("ble_dev_list");}
 static inline QString dev_elem() { return QStringLiteral("dev");}
@@ -205,12 +206,13 @@ static bool parse_oth_settings(QDomElement &e, sw_settings_t &loaded)
         if(info_e.tagName() == use_remote_db_elem())
         {
             loaded.oth_settings.use_remote_db = (bool)(info_e.text().toInt());
-            ret = true;
         }
         else
         {
-            qDebug() << "Unknown tag in " << oth_settings_elem()
-                     << " :" << info_e.tagName();
+            QString err;
+            err = QString("Unknown xml element in %1:%2").arg(e.tagName()).arg(info_e.tagName());
+            Logger::instance()->writeLog(__FILE__, __LINE__,
+                                         LOG_LEVEL::LOG_INFO, err);
         }
         info_e = info_e.nextSiblingElement();
     }
@@ -231,17 +233,20 @@ static str_bool_map_t& load_sw_settings_from_xml(sw_settings_t &loaded)
 {
     QFile xml_file(g_settings_xml_fpn);
     QDomDocument doc;
+    QString err;
 
     str_parser_map_t &parser_map = init_sw_settings_xml_parser();
     xml_parse_result.clear();
     if(!xml_file.open(QIODevice::ReadOnly))
     {
-        qDebug() << "Open XML file " << g_settings_xml_fpn << " fail!";
+        err = QString("Open XML file %1 fail!").arg(g_settings_xml_fpn);
+        Logger::instance()->writeLog(__FILE__, __LINE__, LOG_LEVEL::LOG_WARN, err);
         return xml_parse_result;
     }
     if(!doc.setContent(&xml_file))
     {
-        qDebug() << "DomDocument setContent fail";
+        err = QString("DomDocument setContent fail");
+        Logger::instance()->writeLog(__FILE__, __LINE__, LOG_LEVEL::LOG_ERROR, err);
         return xml_parse_result;
     }
     xml_file.close();
@@ -289,6 +294,8 @@ void load_sw_settings(sw_settings_t &sw_s)
     {
         if(!it.value())
         {/*settings xml file not usable, load default settings.*/
+            Logger::instance()->writeLog(__FILE__, __LINE__, LOG_LEVEL::LOG_INFO,
+                                         QString("xml文件元素 %1 无效").arg(it.key()));
             if(it.key() == ble_dev_list_elem())
             {
                 setting_ble_dev_info_t *ble_dev = new setting_ble_dev_info_t;

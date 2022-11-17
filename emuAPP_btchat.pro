@@ -9,6 +9,7 @@ android: QT += androidextras
 SOURCES = \
     characteristicinfo.cpp \
     diy_common_tool.cpp \
+    logger.cpp \
     main.cpp \
     chat.cpp \
     remoteselector.cpp \
@@ -22,6 +23,7 @@ HEADERS = \
     characteristicinfo.h \
     chat.h \
     diy_common_tool.h \
+    logger.h \
     remoteselector.h \
     chatserver.h \
     chatclient.h \
