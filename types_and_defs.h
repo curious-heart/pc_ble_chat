@@ -21,4 +21,12 @@ extern const char* g_def_db_login_pwd;
 extern const bool g_def_use_remote_db;
 extern const char* g_settings_xml_fpn;
 
+extern const int g_def_light_num;
+extern const int g_def_lambda_list[];
+extern const int g_max_light_flash_period;
+extern const int g_min_light_flash_period;
+extern const int g_def_light_flash_period;
+extern const int g_max_light_flash_gap;
+extern const int g_min_light_flash_gap;
+extern const int g_def_light_flash_gap;
 #endif // TYPES_AND_DEFS_H

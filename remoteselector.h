@@ -89,7 +89,7 @@ public:
                     QWidget *parent = nullptr);
     ~RemoteSelector();
 
-    void startDiscovery(const QBluetoothUuid &uuid);
+    void startDiscovery();
     void stopDiscovery();
     ServiceInfo * intersted_service() const;
     QBluetoothDeviceInfo * current_device();

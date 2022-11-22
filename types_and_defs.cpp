@@ -5,6 +5,15 @@ const char* g_def_ble_dev_addr = "27:A5:D2:1E:67:DD";
 const char*  g_def_ble_srv_uuid = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
 const char* g_def_ble_tx_char_uuid = "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
 const char* g_def_ble_rx_char_uuid = "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+const int g_def_light_num = 19;
+const int g_def_lambda_list[g_def_light_num ] = {354,376,405,450,505,560,600,645,680,705,800,850,910,930,970,1000,1050,1070,1200};
+const int g_max_light_flash_period = 100*1000; //100 seconds
+const int g_min_light_flash_period = 500; //500 milliseconds
+const int g_def_light_flash_period = 500; //500 milliseconds
+const int g_max_light_flash_gap = 1000;//1 second
+const int g_min_light_flash_gap = 0;
+const int g_def_light_flash_gap = 10; //10 milliseconds
+
 
 const char* g_def_db_srvr_addr = "li371359001.vicp.net";
 const uint16_t  g_def_db_srvr_port = 3306;

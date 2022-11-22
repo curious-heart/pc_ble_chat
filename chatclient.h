@@ -70,7 +70,7 @@ public:
     explicit ChatClient(QObject *parent = nullptr);
     ~ChatClient();
 
-    void startClient(const ServiceInfo* remoteservice);
+    //void startClient(const ServiceInfo* remoteservice);
     void stopClient();
 
 public slots:

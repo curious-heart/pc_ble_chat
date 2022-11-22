@@ -3,8 +3,17 @@
 
 #include <QString>
 #include <QList>
+#include <QMap>
 #include <QFile>
 #include <QDebug>
+
+typedef struct _light_info_t
+{
+    int lambda; /*波长(nm)*/
+    int flash_period; /*点亮时长(ms)*/
+    int flash_gap; /*熄灭后到下一个灯点亮前的间隔时间(ms)*/
+}light_info_t;
+typedef QMap<int, light_info_t*> light_list_t;
 
 typedef class _ble_dev_info_t
 {
@@ -12,31 +21,45 @@ public:
     QString addr;
     QString srv_uuid;
     QString rx_char_uuid, tx_char_uuid;
-    QList<int> lambda_list;
+    light_list_t light_list;
 
     _ble_dev_info_t()
     {
-        clear();
+        clear_all();
     }
     ~_ble_dev_info_t()
     {
-        clear();
+        clear_all();
     }
-    void clear()
+    void clear_light_list()
+    {
+        light_list_t::iterator it = light_list.begin();
+        while(it != light_list.end())
+        {
+            delete it.value();
+            ++it;
+        }
+        light_list.clear();
+    }
+    void clear_all()
     {
         addr = srv_uuid = rx_char_uuid = tx_char_uuid = QString();
-        lambda_list.clear();
+        clear_light_list();
     }
     void log_print()
     {
-       qDebug() << "dev addr: " << addr
-                << "dev srv_uuid: " << srv_uuid
-                << "dev rx_char_uuid: " << rx_char_uuid
+       qDebug() << "dev addr: " << addr << ","
+                << "dev srv_uuid: " << srv_uuid << ","
+                << "dev rx_char_uuid: " << rx_char_uuid << ","
                 << "dev tx_char_uuid: " << tx_char_uuid << "\n";
-       qDebug() << "dev lambda_list: ";
-       for(auto &s: lambda_list)
+       qDebug() << "dev light_list: " << "\n";
+       light_list_t::iterator it = light_list.begin();
+       while(it != light_list.end())
        {
-           qDebug() << (int)s << ",";
+           light_info_t* info = it.value();
+           qDebug() << "lambda:" << info->lambda << ","
+                    << "flash_period:" << info->flash_period << ","
+                    << "flash_gap" << info->flash_gap << "\n";
        }
        qDebug() << "\n";
     }
@@ -67,13 +90,13 @@ public:
     }
     void log_print()
     {
-        qDebug() << "db_info srvr_addr" << srvr_addr
-                 << "db_info srvr_port" << srvr_port
-                 << "db_info db_name" << db_name
-                 << "db_info login_id" << login_id
-                 << "db_info login_pwd" << login_pwd
-                 << "db_info dbms_name" << dbms_name
-                 << "db_info dbms_ver" << dbms_ver;
+        qDebug() << "db_info srvr_addr:" << srvr_addr << ","
+                 << "db_info srvr_port:" << srvr_port << ","
+                 << "db_info db_name:" << db_name << ","
+                 << "db_info login_id:" << login_id << ","
+                 << "db_info login_pwd:" << login_pwd << ","
+                 << "db_info dbms_name:" << dbms_name << ","
+                 << "db_info dbms_ver:" << dbms_ver << "\n";
     }
 }setting_db_info_t;
 
@@ -95,7 +118,7 @@ public:
     }
     void log_print()
     {
-        qDebug() << "oth_settings use_remote_db: " << use_remote_db;
+        qDebug() << "oth_settings use_remote_db: " << use_remote_db << "\n";
     }
 }setting_oth_t;
 

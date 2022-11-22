@@ -24,4 +24,10 @@ public:
     void writeLog(QString fileName,int lineNo,LOG_LEVEL level,QString log); //写入日志
 };
 
+#define DIY_LOG(level, fmt_str, ...) \
+    {\
+        QString log = QString::asprintf(fmt_str, ##__VA_ARGS__);\
+        Logger::instance()->writeLog(__FILE__, __LINE__, (level), (log)); \
+        qDebug() << (log) << "\n";\
+    }
 #endif // LOGGER_H

@@ -61,12 +61,13 @@
 #include <QThread>
 
 #include "types_and_defs.h"
+#include "logger.h"
 
 #ifdef Q_OS_ANDROID
 #include <QtAndroidExtras/QtAndroid>
 #endif
 
-static const QLatin1String serviceUuid("e8e10f95-1a70-4b27-9ccf-02010264e9c8");
+//static const QLatin1String serviceUuid("e8e10f95-1a70-4b27-9ccf-02010264e9c8");
 #ifdef Q_OS_ANDROID
 static const QLatin1String reverseUuid("c8e96402-0102-cf9c-274b-701a950fe1e8");
 #endif
@@ -297,7 +298,7 @@ void Chat::connectClicked()
         m_remoteSelector->startDiscovery(QBluetoothUuid(serviceUuid));
 #else
     //remoteSelector.startDiscovery(QBluetoothUuid(serviceUuid));
-    m_remoteSelector->startDiscovery(QBluetoothUuid(serviceUuid));
+    m_remoteSelector->startDiscovery();
 #endif
     //if (remoteSelector.exec() == QDialog::Accepted) {
     if (m_remoteSelector->exec() == QDialog::Accepted) {
@@ -506,18 +507,6 @@ void Chat::send_data_to_device()
     {
         QMessageBox::question(nullptr, "!!!", "No valid characteristic!");
     }
-/*
-    ui->sendButton->setEnabled(false);
-    ui->sendText->setEnabled(false);
-
-    showMessage(localName, ui->sendText->text());
-    emit sendMessage(ui->sendText->text());
-
-    ui->sendText->clear();
-
-    ui->sendText->setEnabled(true);
-    ui->sendButton->setEnabled(true);
-*/
 }
 //! [sendClicked]
 void Chat::BleServiceCharacteristicWrite(const QLowEnergyCharacteristic &c,

@@ -50,6 +50,7 @@
 
 #include "remoteselector.h"
 #include "ui_remoteselector.h"
+#include "logger.h"
 
 #include <QtBluetooth/qbluetoothlocaldevice.h>
 #include <QtBluetooth/qbluetoothservicediscoveryagent.h>
@@ -87,7 +88,7 @@ RemoteSelector::~RemoteSelector()
     delete ui;
 }
 
-void RemoteSelector::startDiscovery(const QBluetoothUuid &uuid)
+void RemoteSelector::startDiscovery()
 {
     ui->status->setText(tr("Scanning..."));
     if (m_dev_discoveryAgent->isActive())
@@ -98,6 +99,7 @@ void RemoteSelector::startDiscovery(const QBluetoothUuid &uuid)
     m_target_dev_setting_info = nullptr;
     m_dev_discoveryAgent->start(QBluetoothDeviceDiscoveryAgent::LowEnergyMethod);
     //m_dev_discoveryAgent->start();
+    ui->remoteDevices->setEnabled(false);
 }
 
 void RemoteSelector::stopDiscovery()
@@ -138,12 +140,9 @@ void RemoteSelector::deviceFound(const QBluetoothDeviceInfo &deviceInfo)
         QString ind;
         if(setting_info != nullptr)
         {
-            ind = "**";
+            ind = QString("**");
         }
-        else
-        {
-            ind = "";
-        }
+
         QListWidgetItem *item =
             new QListWidgetItem(QString::fromLatin1("%1 %2 %3").arg(ind,
                                                                     dev_name,
@@ -176,6 +175,7 @@ void RemoteSelector::dev_discoveryFinished()
         result_str = "没有发现设备";
     }
     QMessageBox::information(nullptr, title_str, result_str);
+    ui->remoteDevices->setEnabled(true);
     //if(!m_target_device_found)
     if(cnt <= 0)
     {
@@ -230,6 +230,7 @@ void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
         connect(controller, &QLowEnergyController::discoveryFinished,
                 this, &RemoteSelector::serviceScanDone);
     }
+    ui->remoteDevices->setEnabled(false);
     ui->status->setText(QString("正在搜索服务..."));
     controller->setRemoteAddressType(QLowEnergyController::PublicAddress);
     controller->connectToDevice();
@@ -330,6 +331,9 @@ void RemoteSelector::recogonize_char(QLowEnergyService * intersted_srv)
     QString char_property_hex
             = QString("%1").arg(m_intersted_char_rx->getCharacteristic().properties(), 4, 16, QLatin1Char('0'));
     qDebug() << "rx char: " + char_uuid_str + char_property_hex;
+    DIY_LOG(LOG_LEVEL::LOG_INFO,
+            "rx char: %ls, char_property: %ls",
+            char_uuid_str.utf16(),char_property_hex.utf16());
     QListWidgetItem *item
             = new QListWidgetItem("char_rx: " + char_uuid_str + "," + char_property_hex);
     ui->remoteDevices->addItem(item);
@@ -338,6 +342,9 @@ void RemoteSelector::recogonize_char(QLowEnergyService * intersted_srv)
             = QString("%1").arg(m_intersted_char_tx->getCharacteristic().properties(), 4, 16, QLatin1Char('0'));
     item = new QListWidgetItem("char_tx: " + char_uuid_str + "," + char_property_hex);
     qDebug() << "tx char: " + char_uuid_str + char_property_hex;
+    DIY_LOG(LOG_LEVEL::LOG_INFO,
+            "tx char: %ls, char_property: %ls",
+            char_uuid_str.utf16(),char_property_hex.utf16());
     ui->remoteDevices->addItem(item);
 }
 
@@ -362,12 +369,16 @@ void RemoteSelector::serviceDetailsDiscovered(QLowEnergyService::ServiceState ne
         }
 
         qDebug() << "newState is:" << newState;
+        ui->ScanServiceBtn->setEnabled(true);
         return;
     }
     //QMessageBox::information(NULL, "OK", "Service Details discovered");
     auto service = qobject_cast<QLowEnergyService *>(sender());
     if (!service)
+    {
+        ui->ScanServiceBtn->setEnabled(true);
         return;
+    }
 
     qDebug() << "Now recogonize characteristic...";
     recogonize_char(service);
@@ -398,6 +409,7 @@ void RemoteSelector::on_ScanServiceBtn_clicked()
     {
         if(m_service->service()->state() == QLowEnergyService::DiscoveryRequired)
         {
+            ui->ScanServiceBtn->setEnabled(false);
             connect(m_service->service(),
                     &QLowEnergyService::stateChanged,
                     this,
@@ -405,8 +417,8 @@ void RemoteSelector::on_ScanServiceBtn_clicked()
             m_service->service()->discoverDetails();
             return;
         }
-        QMessageBox::information(nullptr, "OK!", "连接建立完成，可以开始采集数据");
         recogonize_char(m_service->service());
+        QMessageBox::information(nullptr, "OK!", "连接建立完成，可以开始采集数据");
     }
     else
     {
