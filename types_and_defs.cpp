@@ -13,7 +13,7 @@ const int g_def_light_flash_period = 500; //500 milliseconds
 const int g_max_light_flash_gap = 1000;//1 second
 const int g_min_light_flash_gap = 0;
 const int g_def_light_flash_gap = 10; //10 milliseconds
-
+const char * g_def_dev_id_prefix = "skin_detc_";
 
 const char* g_def_db_srvr_addr = "li371359001.vicp.net";
 const uint16_t  g_def_db_srvr_port = 3306;

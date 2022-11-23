@@ -67,6 +67,8 @@ public:
     QString getName() const;
     QString getType() const;
     QString getWholeUuid() const;
+    QString getStateStr() const;
+    static QString getStateStr(QLowEnergyService::ServiceState st);
 
 Q_SIGNALS:
     void serviceChanged();

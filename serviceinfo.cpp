@@ -116,3 +116,24 @@ QString ServiceInfo::getWholeUuid() const
 
     return uuid.toString().remove(QLatin1Char('{')).remove(QLatin1Char('}'));
 }
+
+/*The string list refers to  ServiceState in qlowenergyservice.h*/
+static const char* ble_serv_state_str_list[] = {
+    "InvalidService",
+    "DiscoveryRequired",
+    "DiscoveringServices",
+    "ServiceDiscovered",
+    "LocalService",
+};
+QString ServiceInfo::getStateStr() const
+{
+    if (!m_service)
+        return QString();
+
+    return QString(ble_serv_state_str_list[(int)(m_service->state())]);
+}
+
+QString ServiceInfo::getStateStr(QLowEnergyService::ServiceState st)
+{
+    return QString(ble_serv_state_str_list[(int)st]);
+}

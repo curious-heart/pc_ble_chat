@@ -111,6 +111,9 @@ public:
     QBluetoothUuid m_intersted_char_rx_uuid;
                 //= QBluetoothUuid(QString("0000fff1-0000-1000-8000-00805f9b34fb"));
     void search_all_dev(bool all_dev);
+    /*point to one of items in m_intersted_devs, corresponding to the one user
+      selected from device-scan result*/
+    setting_ble_dev_info_t * m_target_dev_setting_info = nullptr;
 
 private:
     Ui::RemoteSelector *ui;
@@ -120,9 +123,6 @@ private:
     QBluetoothDeviceInfo m_device;
     //bool m_target_device_found = false;
     //setting_ble_dev_info_t * m_target_device_found = nullptr;
-    /*point to one of items in m_intersted_devs, corresponding to the one user
-      selected from device-scan result*/
-    setting_ble_dev_info_t * m_target_dev_setting_info = nullptr;
     QLowEnergyController *controller = nullptr;
     QList<QObject *> m_services;
     ServiceInfo * m_service = nullptr;
@@ -143,6 +143,7 @@ private:
 private slots:
     //void serviceDiscovered(const QBluetoothServiceInfo &serviceInfo);
     void dev_discoveryFinished();
+    void dev_discoveryErr(QBluetoothDeviceDiscoveryAgent::Error error);
     void on_remoteDevices_itemActivated(QListWidgetItem *item);
     //void on_cancelButton_clicked();
 

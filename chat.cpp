@@ -284,7 +284,9 @@ void Chat::connectClicked()
     m_remoteSelector = new RemoteSelector(m_adapter, m_sw_settings.ble_dev_list);
     if(nullptr == m_remoteSelector)
     {
-        QMessageBox::critical(nullptr, "Error!", "remoteSelector NULL");
+        QString err = QString("remoteSelector NULL");
+        QMessageBox::critical(nullptr, "Error!", err);
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
         ui->connectButton->setEnabled(true);
         return;
     }
@@ -307,7 +309,24 @@ void Chat::connectClicked()
         m_service = m_remoteSelector->intersted_service();
         m_rx_char = m_remoteSelector->rx_char();
         m_tx_char = m_remoteSelector->tx_char();
-        Q_ASSERT(m_service && m_rx_char && m_tx_char);
+        m_work_dev_info = m_remoteSelector->m_target_dev_setting_info;
+        if(!m_service || !m_rx_char || !m_tx_char || !m_work_dev_info)
+        {
+            QString err;
+            err = QString("Device service info error:\n"
+                          "m_service:0x%1\n"
+                          "m_rx_char:0x%2\n"
+                          "m_tx_char:0x%3\n"
+                          "m_work_dev_info:0x%4").arg(QString((quint64)m_service, 16),
+                                                   QString((quint64)m_rx_char,16),
+                                                   QString((quint64)m_tx_char,16),
+                                                   QString((quint64)m_work_dev_info ,16));
+            QMessageBox::critical(nullptr, "!!!", err);
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+            return;
+        }
+
+        m_light_num = m_work_dev_info->light_list.count();
         /* qDebug() << "Characterstic:\n"
                << m_rx_char->getName() << "," << m_rx_char->getUuid() << "\n"
                << m_tx_char->getName() << "," << m_tx_char->getUuid(); */
@@ -495,10 +514,8 @@ void Chat::send_data_to_device()
             m_single_light_write = false;
             for(int i=0; i < m_light_num; i++)
             {
-                //read_notify();
                 m_service->service()->writeCharacteristic(m_tx_char->getCharacteristic(),
                                                           m_write_data_list[i]);
-                //read_notify();
                 QThread::msleep(500);
             }
         }
@@ -635,7 +652,7 @@ void Chat::on_disconnButton_clicked()
 
 void Chat::init_write_data()
 {
-    unsigned char write_data[m_light_num][m_write_data_len]=
+    unsigned char write_data[][m_write_data_len]=
     {
         {//1
 0x3D,0x11,0x1,0x23,0x1,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x0,0x99

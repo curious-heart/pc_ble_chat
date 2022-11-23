@@ -20,6 +20,7 @@ extern const char* g_def_db_login_id;
 extern const char* g_def_db_login_pwd;
 extern const bool g_def_use_remote_db;
 extern const char* g_settings_xml_fpn;
+extern const char * g_def_dev_id_prefix;
 
 extern const int g_def_light_num;
 extern const int g_def_lambda_list[];

@@ -2,6 +2,7 @@
 <!--说明
     <ble_dev_list> 如果最终所有<dev>都不可用，则会使用软件内置默认的device信息。
 	<dev>
+	    <dev_id>original_dev</dev_id> 可选。如果不指定，软件会请用户设置或自动生成。
 	    <addr>27:A5:D2:1E:67:DD</addr> 必须存在且合法，否则此<dev>会被抛弃。
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid> 同<addr>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char> 同<addr>
@@ -34,15 +35,16 @@
 <cfg_info>
     <ble_dev_list>
 	<dev>
+	    <dev_id>original_dev</dev_id>
 	    <addr>27:A5:D2:1E:67:DD</addr>
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
 	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
-	    <light_list> <!-- 灯列表 -->
+	    <light_list> 
 		<light>
-		    <lambda>354</lambda> <!-- 波长(nm).必选 -->
-		    <flash_period>500</flash_period> <!-- 一个灯点亮的时长(ms).可选-->
-		    <flash_gap>10</flash_gap>  <!-- 一个灯熄灭后到下一个灯点亮的时间间隔. 可选-->
+		    <lambda>354</lambda> 
+		    <flash_period>500</flash_period> 
+		    <flash_gap>10</flash_gap>  
 		</light>
 		<light>
 		    <lambda>376</lambda>
@@ -129,6 +131,7 @@
 	    </light_list>
 	</dev>
 	<dev>
+	    <dev_id>colone_1</dev_id>
 	    <addr>1E:A2:CA:1E:67:DD</addr>
 	    <!--
 	    <srv_uuid>0000fff0-0000-1000-8000-00805f9b34fb</srv_uuid>
@@ -172,10 +175,10 @@
 		    <lambda>645</lambda>
 		</light>
 	    </light_list>
-	</dev>
-
+        </dev>
 	<dev>
-	    <addr>FF:BD:CA:1E:67:DD</addr>
+	    <dev_id>colone_2</dev_id>
+	    <addr>33:BD:CA:1E:67:DD</addr>
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
 	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>

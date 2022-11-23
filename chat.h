@@ -64,6 +64,7 @@
 #include <QDomDocument>
 #include <QList>
 
+#include "types_and_defs.h"
 #include "sw_setting_parse.h"
 
 QT_USE_NAMESPACE
@@ -140,13 +141,14 @@ private:
 
     RemoteSelector* m_remoteSelector = nullptr;
     QList<QByteArray> m_write_data_list;
-    static const int m_light_num = 19;
+    int m_light_num = g_def_light_num;
     static const int m_write_data_len = 20;
     static const unsigned char m_light_idx_pos = 2;
     /*data start with "0x5A 0x11" are considered valid.*/
     const QByteArray m_valid_data_flag = "\x5A\x11";
     ServiceInfo * m_service = nullptr;
     CharacteristicInfo* m_rx_char = nullptr, *m_tx_char = nullptr;
+    setting_ble_dev_info_t * m_work_dev_info = nullptr;
 
     bool m_file_write_ready = false;
     bool m_dir_ready = false;

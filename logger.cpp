@@ -43,7 +43,7 @@ void Logger::writeLog(QString fileName, int lineNo, LOG_LEVEL level, QString msg
     if(!file.open(QFile::WriteOnly | QFile::Append))
         return;
     QTextStream in(&file);
-    in<<date<<" "<<time<<"  "<<fileName<<"  ["<<lineNo<<"]"<<"  ["<<levels[level]<<"]\r\n";
+    in<<"\t"<<date<<" "<<time<<"  "<<fileName<<"  ["<<lineNo<<"]"<<"  ["<<levels[level]<<"]\r\n";
     in<<msg<<"\r\n";
     file.flush();
     file.close();

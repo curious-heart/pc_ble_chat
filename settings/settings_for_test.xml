@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<cfg_info>
+    <ble_dev_list>
+	<dev>
+	    <addr>00:BD:CA:1E:67:DD</addr>
+	    <srv_uuid>11111111-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
+	    <rx_char>fe400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
+	    <tx_char>6e4aaaa2-b5a3-f393-eaa9-e5ae24dcca9e</tx_char>
+	</dev>
+
+	<dev>
+	    <addr>11:BD:CA:1E:67:DD</addr>
+	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
+	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
+	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
+	    <light_list></light_list>
+	</dev>
+
+	<dev>
+	    <addr>12:BD:CA:1E:67:DD</addr>
+	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
+	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
+	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
+	    <light_list>
+		<light>
+		    <lambda>111</lambda>
+		    <flash_period>511</flash_period>
+		    <flash_gap>456</flash_gap>
+		</light>
+		<light>
+		    <lambda>22</lambda>
+		    <flash_period>522</flash_period>
+		</light>
+		<light>
+		    <lambda>340</lambda>
+		    <flash_gap>5</flash_gap>
+		</light>
+		<light>
+		    <lambda>706</lambda>
+		</light>
+		<light>
+		    <lambda>1400</lambda>
+		    <flash_period>600</flash_period>
+		    <flash_gap>1024</flash_gap>
+		</light>
+		<light>
+		    <lambda>1500</lambda>
+		    <flash_period>2001000</flash_period>
+		    <flash_gap>46</flash_gap>
+		</light>
+		<light>
+		    <lambda>1600</lambda>
+		    <flash_period>11</flash_period>
+		    <flash_gap>-3</flash_gap>
+		</light>
+		<light>
+		    <lambda>1700</lambda>
+		    <flash_period>100000</flash_period>
+		    <flash_gap>0</flash_gap>
+		</light>
+	    </light_list>
+	</dev>
+
+	<dev>
+	    <addr>13:BD:CA:1E:67:DD</addr>
+	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
+	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
+	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
+	    <light_list>
+		<light>
+		    <lambda>13</lambda>
+		    <flash_period></flash_period>
+		    <flash_gap>456</flash_gap>
+		</light>
+		<light>
+		    <lambda>eritw</lambda>
+		    <flash_period>511</flash_period>
+		    <flash_gap>456</flash_gap>
+		</light>
+	    </light_list>
+	</dev>
+
+	<dev>
+	    <addr>14:BD:CA:1E:67:DD</addr>
+	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
+	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
+	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
+	    <light_list>
+		<light>
+		    <lambda>13</lambda>
+		    <flash_period></flash_period>
+		    <flash_gap>gggappp</flash_gap>
+		</light>
+		<light>
+		    <lambda>4509</lambda>
+		    <flash_period>ewfw{}</flash_period>
+		    <flash_gap>15</flash_gap>
+		</light>
+	    </light_list>
+	</dev>
+    </ble_dev_list>
+
+    <db_info>
+	<srvr_addr>li371359001.vicp.net</srvr_addr>
+	<srvr_port>3306</srvr_port>
+	<dbms_name>MySQL</dbms_name>
+	<dbms_ver>5.7.26</dbms_ver>
+	<db_name>detector</db_name>
+	<login_id>admin</login_id>
+	<login_pwd>admin123</login_pwd>
+    </db_info>
+
+    <oth_settings>
+	<!-- 1: yes, 0: no -->
+	<use_remote_db>1</use_remote_db>
+    </oth_settings>
+</cfg_info>

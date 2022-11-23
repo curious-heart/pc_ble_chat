@@ -9,6 +9,7 @@
 
 static inline QString ble_dev_list_elem() { return QStringLiteral("ble_dev_list");}
 static inline QString dev_elem() { return QStringLiteral("dev");}
+static inline QString dev_id_elem() { return QStringLiteral("dev_id");}
 static inline QString addr_elem() { return QStringLiteral("addr");}
 static inline QString srv_uuid_elem() { return QStringLiteral("srv_uuid");}
 static inline QString rx_char_elem() { return QStringLiteral("rx_char");}
@@ -205,6 +206,10 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
                 if(info_e.tagName() == addr_elem())
                 {
                     dev_info->addr = info_e.text();
+                }
+                else if(info_e.tagName() == dev_id_elem())
+                {
+                    dev_info->dev_id = info_e.text();
                 }
                 else if(info_e.tagName() == srv_uuid_elem())
                 {

@@ -66,6 +66,14 @@ RemoteSelector::RemoteSelector(const QBluetoothAddress &localAdapter,
     ui->ScanServiceBtn->setEnabled(false);
 
     m_dev_discoveryAgent = new QBluetoothDeviceDiscoveryAgent();
+    if(!m_dev_discoveryAgent)
+    {
+        QString err = QString("New QBluetoothDeviceDiscoveryAgent fail!");
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+        QMessageBox::critical(nullptr, "!!!", err);
+        return;
+    }
+
     m_dev_discoveryAgent->setLowEnergyDiscoveryTimeout(5000);
     connect(m_dev_discoveryAgent,
             &QBluetoothDeviceDiscoveryAgent::deviceDiscovered,
@@ -79,6 +87,10 @@ RemoteSelector::RemoteSelector(const QBluetoothAddress &localAdapter,
             &QBluetoothDeviceDiscoveryAgent::canceled,
             this,
             &RemoteSelector::dev_discoveryFinished);
+    connect(m_dev_discoveryAgent,
+            QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error),
+            this,
+            &RemoteSelector::dev_discoveryErr);
 }
 
 RemoteSelector::~RemoteSelector()
@@ -97,6 +109,7 @@ void RemoteSelector::startDiscovery()
     ui->remoteDevices->clear();
     //m_target_device_found = nullptr; //false;
     m_target_dev_setting_info = nullptr;
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "Begin to scan device...");
     m_dev_discoveryAgent->start(QBluetoothDeviceDiscoveryAgent::LowEnergyMethod);
     //m_dev_discoveryAgent->start();
     ui->remoteDevices->setEnabled(false);
@@ -150,6 +163,7 @@ void RemoteSelector::deviceFound(const QBluetoothDeviceInfo &deviceInfo)
         m_discoveredDevices.insert(item, deviceInfo);
         ui->remoteDevices->addItem(item);
 
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "Find device: %ls", dev_addr.utf16());
         /*
         if(!m_all_dev_scan)
         {
@@ -174,6 +188,7 @@ void RemoteSelector::dev_discoveryFinished()
         title_str = "!!!";
         result_str = "没有发现设备";
     }
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "%ls. cnt = %d", result_str.utf16(), cnt);
     QMessageBox::information(nullptr, title_str, result_str);
     ui->remoteDevices->setEnabled(true);
     //if(!m_target_device_found)
@@ -183,10 +198,15 @@ void RemoteSelector::dev_discoveryFinished()
     }
 }
 
+void RemoteSelector::dev_discoveryErr(QBluetoothDeviceDiscoveryAgent::Error error)
+{
+    DIY_LOG(LOG_LEVEL::LOG_ERROR,
+            "Error in QBluetoothDeviceDiscoveryAgent %ls: ",
+            m_dev_discoveryAgent->errorString().utf16());
+}
+
 void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
 {
-    qDebug() << "got click" << item->text();
-
     QString dev_name, dev_address;
 
     m_device = m_discoveredDevices.value(item);
@@ -216,7 +236,9 @@ void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
         controller = QLowEnergyController::createCentral(m_device);
         if(!controller)
         {
-            QMessageBox::critical(nullptr, "!!!", "Create BLE Controller Error");
+            QString err = QString("Create BLE Controller Error!");
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+            QMessageBox::critical(nullptr, "!!!", err);
             return;
         }
         connect(controller, &QLowEnergyController::connected,
@@ -231,7 +253,8 @@ void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
                 this, &RemoteSelector::serviceScanDone);
     }
     ui->remoteDevices->setEnabled(false);
-    ui->status->setText(QString("正在搜索服务..."));
+    ui->status->setText(QString("正在连接设备..."));
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "Begin to connect to device...");
     controller->setRemoteAddressType(QLowEnergyController::PublicAddress);
     controller->connectToDevice();
 
@@ -240,27 +263,38 @@ void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
 
 void RemoteSelector::deviceConnected()
 {
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "Device connected!");
+    ui->status->setText(QString("正在搜索服务..."));
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "Begin to discover service...");
     controller->discoverServices();
 }
 
 void RemoteSelector::deviceDisconnected()
 {
-    qWarning() << "Disconnect from device";
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "Disconnect from device");
+
     ui->ScanServiceBtn->setEnabled(false);
     emit disconnected();
 }
 
 void RemoteSelector::addLowEnergyService(const QBluetoothUuid &serviceUuid)
 {
+    DIY_LOG(LOG_LEVEL::LOG_INFO,
+            "Discover a service: %ls", serviceUuid.toString().utf16());
+
     QLowEnergyService *service = controller->createServiceObject(serviceUuid);
     if (!service) {
-        qWarning() << "Cannot create service for uuid";
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Cannot create service for uuid!");
         return;
     }
     //A new service is discovered, now save it.
     auto serv = new ServiceInfo(service);
+    if(!serv)
+    {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Cannot new ServiceInfo!");
+        return;
+    }
     m_services.append(serv);
-    qDebug() << "Find service:" << service->serviceUuid().toString();
 }
 
 void RemoteSelector::serviceScanDone()
@@ -268,6 +302,7 @@ void RemoteSelector::serviceScanDone()
     bool intersted_srv_found = false;
     ServiceInfo* intersted_srv = nullptr;
 
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "Service discovery finished!");
     for (auto s: qAsConst(m_services)) {
         auto serviceInfo = qobject_cast<ServiceInfo *>(s);
         if (!serviceInfo)
@@ -278,8 +313,11 @@ void RemoteSelector::serviceScanDone()
         srv_type = serviceInfo->getType();
         //srv_uuid = serviceInfo->getUuid();
         srv_uuid = serviceInfo->getWholeUuid();
-        srv_state = QString("%1").arg((int)(serviceInfo->service()->state()));
-        qDebug() << "Check srv:" << srv_uuid;
+        srv_state = serviceInfo->getStateStr();
+        DIY_LOG(LOG_LEVEL::LOG_INFO,
+                "Check service %ls, state %ls",
+                srv_uuid.utf16(),
+                srv_state.utf16());
         if(m_intrested_srv_uuid_str == srv_uuid)
         {
             //Intersted service is found, now display only it and clear other devices.
@@ -300,11 +338,15 @@ void RemoteSelector::serviceScanDone()
     {
         m_service = intersted_srv;
         ui->ScanServiceBtn->setEnabled(true);
+        DIY_LOG(LOG_LEVEL::LOG_INFO,
+                "This service %ls is to be used.",
+                m_service->getWholeUuid().utf16());
         QMessageBox::information(nullptr, "OK!",
                               QString::fromUtf8("请点击 \"建立连接\" 按钮"));
     }
     else
     {
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "No available service!");
         QMessageBox::information(nullptr, "!!!",
                                 QString::fromUtf8("未找到合适的服务"));
         m_service = nullptr;
@@ -330,7 +372,6 @@ void RemoteSelector::recogonize_char(QLowEnergyService * intersted_srv)
     QString char_uuid_str = m_intersted_char_rx->getUuid();
     QString char_property_hex
             = QString("%1").arg(m_intersted_char_rx->getCharacteristic().properties(), 4, 16, QLatin1Char('0'));
-    qDebug() << "rx char: " + char_uuid_str + char_property_hex;
     DIY_LOG(LOG_LEVEL::LOG_INFO,
             "rx char: %ls, char_property: %ls",
             char_uuid_str.utf16(),char_property_hex.utf16());
@@ -341,7 +382,6 @@ void RemoteSelector::recogonize_char(QLowEnergyService * intersted_srv)
     char_property_hex
             = QString("%1").arg(m_intersted_char_tx->getCharacteristic().properties(), 4, 16, QLatin1Char('0'));
     item = new QListWidgetItem("char_tx: " + char_uuid_str + "," + char_property_hex);
-    qDebug() << "tx char: " + char_uuid_str + char_property_hex;
     DIY_LOG(LOG_LEVEL::LOG_INFO,
             "tx char: %ls, char_property: %ls",
             char_uuid_str.utf16(),char_property_hex.utf16());
@@ -358,6 +398,9 @@ QString RemoteSelector::format_dev_info_str(const QBluetoothDeviceInfo * dev)
 
 void RemoteSelector::serviceDetailsDiscovered(QLowEnergyService::ServiceState newState)
 {
+    DIY_LOG(LOG_LEVEL::LOG_INFO,
+            "Service Details discovered, new state: %ls",
+            ServiceInfo::getStateStr(newState).utf16());
     if (newState != QLowEnergyService::ServiceDiscovered) {
         // do not hang in "Scanning for characteristics" mode forever
         // in case the service discovery failed
@@ -368,19 +411,18 @@ void RemoteSelector::serviceDetailsDiscovered(QLowEnergyService::ServiceState ne
                                       Qt::QueuedConnection);
         }
 
-        qDebug() << "newState is:" << newState;
         ui->ScanServiceBtn->setEnabled(true);
         return;
     }
-    //QMessageBox::information(NULL, "OK", "Service Details discovered");
     auto service = qobject_cast<QLowEnergyService *>(sender());
     if (!service)
     {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Service Details discovered, but get sender fail!");
         ui->ScanServiceBtn->setEnabled(true);
         return;
     }
 
-    qDebug() << "Now recogonize characteristic...";
+    DIY_LOG(LOG_LEVEL::LOG_INFO,"Now recogonize characteristic...");
     recogonize_char(service);
     QMessageBox::information(nullptr, "OK!", "连接建立完成，可以开始采集数据");
     accept();
@@ -388,8 +430,7 @@ void RemoteSelector::serviceDetailsDiscovered(QLowEnergyService::ServiceState ne
 
 void RemoteSelector::errorReceived(QLowEnergyController::Error /*error*/)
 {
-    qWarning() << "Error: " << controller->errorString();
-    //setUpdate(QString("Back\n(%1)").arg(controller->errorString()));
+    DIY_LOG(LOG_LEVEL::LOG_ERROR, "Error in QLowEnergyController: %ls", controller->errorString().utf16());
 }
 
 void RemoteSelector::on_RScancelButton_clicked()
@@ -409,6 +450,8 @@ void RemoteSelector::on_ScanServiceBtn_clicked()
     {
         if(m_service->service()->state() == QLowEnergyService::DiscoveryRequired)
         {
+            DIY_LOG(LOG_LEVEL::LOG_INFO,
+                    "Service Discovery Required, now begin to discovery details...");
             ui->ScanServiceBtn->setEnabled(false);
             connect(m_service->service(),
                     &QLowEnergyService::stateChanged,
@@ -417,18 +460,22 @@ void RemoteSelector::on_ScanServiceBtn_clicked()
             m_service->service()->discoverDetails();
             return;
         }
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "No discovery is required!");
         recogonize_char(m_service->service());
         QMessageBox::information(nullptr, "OK!", "连接建立完成，可以开始采集数据");
     }
     else
     {
-        QMessageBox::information(nullptr, "!!!", "No intersted service can be scanned.");
+        QString err = QString("No intersted service can be scanned.");
+        DIY_LOG(LOG_LEVEL::LOG_WARN, "%ls", err.utf16());
+        QMessageBox::information(nullptr, "!!!", err);
     }
 
 }
 
 void RemoteSelector::clear_ble_resource()
 {
+    DIY_LOG(LOG_LEVEL::LOG_INFO, __FUNCTION__);
     if(controller)
     {
         controller->disconnectFromDevice();
