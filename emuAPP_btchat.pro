@@ -20,6 +20,7 @@ SOURCES = \
     types_and_defs.cpp
 
 HEADERS = \
+    ble_comm_pkt.h \
     characteristicinfo.h \
     chat.h \
     diy_common_tool.h \

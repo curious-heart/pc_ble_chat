@@ -1,7 +1,8 @@
 #include <QRegExp>
 #include <QRegExpValidator>
-
+#include <QDir>
 #include "diy_common_tool.h"
+#include "logger.h"
 
 QString QByteHexString(const QByteArray &qba)
 {
@@ -21,7 +22,7 @@ QString diy_curr_date_time_str_ms()
     return curr_date_time.toString("yyyyMMdd-hhmmss-zzz");
 }
 
-bool isMacAddress(QString mac)
+bool is_mac_address(QString mac)
 {
     QRegExp rx("^([A-Fa-f0-9]{2}[-,:]){5}[A-Fa-f0-9]{2}$");
     QRegExpValidator v(rx, nullptr);
@@ -36,7 +37,7 @@ bool isMacAddress(QString mac)
     }
 }
 
-bool isFullUUID(QString uuid)
+bool is_full_uuid(QString uuid)
 {
     QRegExp rx("^[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}$");
     QRegExpValidator v(rx, nullptr);
@@ -49,6 +50,38 @@ bool isFullUUID(QString uuid)
     {
         return false;
     }
+}
+
+/*pth_str can be relative or absulute path. e.g. D:/aaa, ../abc*/
+bool mkpth_if_not_exists(QString &pth_str)
+{
+    QDir data_dir(pth_str);
+    bool ret = true;
+    if(!data_dir.exists())
+    {
+        data_dir = QDir();
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "%ls", pth_str.utf16());
+        ret = data_dir.mkpath(pth_str);
+    }
+    return ret;
+
+    /*
+            QDir data_dir(m_data_pth_str);
+            bool mkdir_ret = false;
+            if(!data_dir.exists())
+            {
+                data_dir = QDir(QFileInfo(m_data_pth_str).absolutePath());
+                mkdir_ret = data_dir.mkpath(QFileInfo(m_data_pth_str).fileName());
+                if(!mkdir_ret)
+                {
+                    QString err;
+                    err = QString("Directory \"%1\" does not exist,"
+                                  " and fail to make it.").arg(m_data_pth_str);
+                    DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+                    return;
+                }
+            }
+    */
 }
 
 static const quint8 caCrc8Data_8540[256] = {

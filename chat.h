@@ -84,6 +84,7 @@ public:
 signals:
     void sendMessage(const QString &message);
     void write_data_done_sig();
+    void turn_on_next_light_sig(int no);
 
 private slots:
     void connectClicked();
@@ -105,7 +106,10 @@ private slots:
                                        const QByteArray &value);
     void BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
                                          const QByteArray &value);
+    void BleServiceError(QLowEnergyService::ServiceError newError);
+
     void write_data_done_handle();
+    void turn_on_next_light(int no);
 
     void on_chat_textChanged();
 
@@ -144,8 +148,6 @@ private:
     int m_light_num = g_def_light_num;
     static const int m_write_data_len = 20;
     static const unsigned char m_light_idx_pos = 2;
-    /*data start with "0x5A 0x11" are considered valid.*/
-    const QByteArray m_valid_data_flag = "\x5A\x11";
     ServiceInfo * m_service = nullptr;
     CharacteristicInfo* m_rx_char = nullptr, *m_tx_char = nullptr;
     setting_ble_dev_info_t * m_work_dev_info = nullptr;
@@ -153,18 +155,25 @@ private:
     bool m_file_write_ready = false;
     bool m_dir_ready = false;
     const char* m_data_dir_rel_name = "0000-light_data_dir";
-    const char* m_redundant_dir_rel_name = "ori_data";
-    const char* m_file_name_apx = "_all";
-    QString m_data_file_pth_str, m_redundant_file_path_str;
-    QFile m_file, m_valid_data_file;
+    const char* m_all_rec_dir_rel_name = "ori_data";
+    const char* m_txt_dir_rel_name = "txt";
+    const char* m_csv_dir_rel_name = "csv";
+    const char* m_merged_data_file_rel_name = "datum.csv"; /*all valid file are merged into here.*/
+    const char* m_all_rec_file_name_apx = "_all";
+    QString m_data_pth_str; /*the "root" path to store received data.*/
+    QString m_all_rec_pth_str; /*all received data are stored here.*/
+    QString m_txt_pth_str; /*valid data file are stored here in txt format.*/
+    QString m_csv_pth_str; /*valid data file are stored here in csv format.*/
+    QFile m_all_rec_file, m_txt_file;
     bool m_single_light_write = false;
     bool m_calibrating = false;
     const char* m_calibration_file_name_apx = "校准";
-    const char* m_data_file_type_str = ".txt";
+    const char* m_txt_ext = ".txt";
     bool m_all_dev_scan = false;
     bool m_only_rec_valid_data = true;
-    QString m_current_valid_data_file_name;
-    QString m_data_no;
+    QString m_curr_file_bn_str;
+    QString m_data_no, m_sample_pos, m_skin_type;
+    int m_curr_light_no = -1; /*>=0, used to index software data structure.*/
 
     QTimer m_write_done_timer;
 
@@ -173,7 +182,10 @@ private:
     void read_notify();
     void write_data_done_notify();
     void restart_work();
-    void send_data_to_device();
+    void start_send_data_to_device();
+    bool check_vul_no_dup();
+    bool check_and_mkpth();
+    bool prepare_qfile_for_start();
 
     sw_settings_t m_sw_settings;
 public:

@@ -52,6 +52,7 @@
 #include "characteristicinfo.h"
 #include "qbluetoothuuid.h"
 #include <QByteArray>
+#include "diy_common_tool.h"
 
 CharacteristicInfo::CharacteristicInfo(const QLowEnergyCharacteristic &characteristic):
     m_characteristic(characteristic)
@@ -151,4 +152,38 @@ QString CharacteristicInfo::getPermission() const
 QLowEnergyCharacteristic CharacteristicInfo::getCharacteristic() const
 {
     return m_characteristic;
+}
+
+QString CharacteristicInfo::getDescs() const
+{
+    QString descs("Descriptors:\n");
+    QList<QLowEnergyDescriptor> dl =  m_characteristic.descriptors();
+    for(auto &s: dl)
+    {
+        const QLowEnergyDescriptor &d = (QLowEnergyDescriptor)s;
+        QBluetoothUuid::DescriptorType t = s.type();
+
+        descs += "\t[name: " + d.name() + "\n"
+                + "\t uuid: " + d.uuid().toString() + "\n"
+                + QString("\t type: 0x%1,").arg((ushort)t, 4, 16, QLatin1Char('0'))
+                + QBluetoothUuid::descriptorToString(t) + "\n"
+                + "\t value: " + QByteHexString(d.value()) + "]\n";
+    }
+
+    return descs;
+}
+
+QString CharacteristicInfo::getAllInfoStr() const
+{
+    QString char_info("Characteristic:\n");
+
+    char_info +=
+            "[name: " + getName() + "\n"
+            + " uuid: " + getUuid() + "\n"
+            + " property: " + getPermission() + "\n"
+            + " char_type: "
+            + QBluetoothUuid::characteristicToString((QBluetoothUuid::CharacteristicType)m_characteristic.uuid().toUInt16()) + "\n"
+            + " value: " + getValue() + "\n"
+            + " descriptors: " + getDescs() + "\n";
+    return char_info;
 }

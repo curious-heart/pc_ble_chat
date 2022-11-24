@@ -68,6 +68,7 @@ public:
     QString getType() const;
     QString getWholeUuid() const;
     QString getStateStr() const;
+    QString getAllInfoStr() const;
     static QString getStateStr(QLowEnergyService::ServiceState st);
 
 Q_SIGNALS:

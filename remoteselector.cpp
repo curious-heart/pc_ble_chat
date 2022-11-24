@@ -57,7 +57,7 @@
 
 QT_USE_NAMESPACE
 
-RemoteSelector::RemoteSelector(const QBluetoothAddress &localAdapter,
+RemoteSelector::RemoteSelector(const QBluetoothAddress &/*localAdapter*/,
                            const QMap<QString, setting_ble_dev_info_t*> & cfg_dev_list,
                            QWidget *parent)
     :   QDialog(parent), ui(new Ui::RemoteSelector), m_intersted_devs(cfg_dev_list)
@@ -198,7 +198,7 @@ void RemoteSelector::dev_discoveryFinished()
     }
 }
 
-void RemoteSelector::dev_discoveryErr(QBluetoothDeviceDiscoveryAgent::Error error)
+void RemoteSelector::dev_discoveryErr(QBluetoothDeviceDiscoveryAgent::Error /*error*/)
 {
     DIY_LOG(LOG_LEVEL::LOG_ERROR,
             "Error in QBluetoothDeviceDiscoveryAgent %ls: ",
@@ -244,7 +244,7 @@ void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
         connect(controller, &QLowEnergyController::connected,
                 this, &RemoteSelector::deviceConnected);
         connect(controller, QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error),
-                this, &RemoteSelector::errorReceived);
+                this, &RemoteSelector::ControllerErrorReceived);
         connect(controller, &QLowEnergyController::disconnected,
                 this, &RemoteSelector::deviceDisconnected);
         connect(controller, &QLowEnergyController::serviceDiscovered,
@@ -294,6 +294,8 @@ void RemoteSelector::addLowEnergyService(const QBluetoothUuid &serviceUuid)
         DIY_LOG(LOG_LEVEL::LOG_ERROR, "Cannot new ServiceInfo!");
         return;
     }
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "+++++++ssssssss++++++++++++");
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "%ls", (ServiceInfo*)serv->getAllInfoStr().utf16());
     m_services.append(serv);
 }
 
@@ -302,6 +304,7 @@ void RemoteSelector::serviceScanDone()
     bool intersted_srv_found = false;
     ServiceInfo* intersted_srv = nullptr;
 
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "-------ssssssss------------");
     DIY_LOG(LOG_LEVEL::LOG_INFO, "Service discovery finished!");
     for (auto s: qAsConst(m_services)) {
         auto serviceInfo = qobject_cast<ServiceInfo *>(s);
@@ -356,6 +359,7 @@ void RemoteSelector::serviceScanDone()
 void RemoteSelector::recogonize_char(QLowEnergyService * intersted_srv)
 {
     const QList<QLowEnergyCharacteristic> chars = intersted_srv->characteristics();
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "++++++++++++");
     for (const QLowEnergyCharacteristic &ch : chars)
     {
         auto cInfo = new CharacteristicInfo(ch);
@@ -368,7 +372,10 @@ void RemoteSelector::recogonize_char(QLowEnergyService * intersted_srv)
         {
             m_intersted_char_tx = cInfo;
         }
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "%ls",
+                (CharacteristicInfo*)cInfo->getAllInfoStr().utf16());
     }
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "------------");
     QString char_uuid_str = m_intersted_char_rx->getUuid();
     QString char_property_hex
             = QString("%1").arg(m_intersted_char_rx->getCharacteristic().properties(), 4, 16, QLatin1Char('0'));
@@ -428,7 +435,7 @@ void RemoteSelector::serviceDetailsDiscovered(QLowEnergyService::ServiceState ne
     accept();
 }
 
-void RemoteSelector::errorReceived(QLowEnergyController::Error /*error*/)
+void RemoteSelector::ControllerErrorReceived(QLowEnergyController::Error /*error*/)
 {
     DIY_LOG(LOG_LEVEL::LOG_ERROR, "Error in QLowEnergyController: %ls", controller->errorString().utf16());
 }
@@ -495,27 +502,4 @@ void RemoteSelector::clear_ble_resource()
 void RemoteSelector::search_all_dev(bool all_dev)
 {
     m_all_dev_scan = all_dev;
-}
-/*--------------------------------------------------------------------------------*/
-/*Below functions is not used currentlly.*/
-void RemoteSelector::scan_char()
-{
-    if(m_service)
-    {
-        if(m_service->service()->state() == QLowEnergyService::DiscoveryRequired)
-        {
-            connect(m_service->service(),
-                    &QLowEnergyService::stateChanged,
-                    this,
-                    &RemoteSelector::serviceDetailsDiscovered);
-            m_service->service()->discoverDetails();
-            return;
-        }
-        recogonize_char(m_service->service());
-    }
-    else
-    {
-        qDebug() << "No intersted service can be scanned.";
-    }
-
 }

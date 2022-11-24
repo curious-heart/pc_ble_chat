@@ -37,28 +37,28 @@ typedef QMap<QString, parser_t> str_parser_map_t;
 static bool check_setting_device_info(setting_ble_dev_info_t &dev_info)
 {
     bool ret = true;
-    if(!isMacAddress(dev_info.addr))
+    if(!is_mac_address(dev_info.addr))
     {
         DIY_LOG(LOG_LEVEL::LOG_WARN,
                 "%ls error in setting_device_info: %ls",
                 addr_elem().utf16(), dev_info.addr.utf16());
         ret = false;
     }
-    if(!isFullUUID(dev_info.srv_uuid))
+    if(!is_full_uuid(dev_info.srv_uuid))
     {
         DIY_LOG(LOG_LEVEL::LOG_WARN,
                 "%ls error in setting_device_info: %ls",
                 srv_uuid_elem().utf16(), dev_info.srv_uuid.utf16());
         ret = false;
     }
-    if(!isFullUUID(dev_info.rx_char_uuid))
+    if(!is_full_uuid(dev_info.rx_char_uuid))
     {
         DIY_LOG(LOG_LEVEL::LOG_WARN,
                 "%ls error in setting_device_info: %ls",
                 rx_char_elem().utf16(), dev_info.rx_char_uuid.utf16());
         ret = false;
     }
-    if(!isFullUUID(dev_info.tx_char_uuid))
+    if(!is_full_uuid(dev_info.tx_char_uuid))
     {
         DIY_LOG(LOG_LEVEL::LOG_WARN,
                 "%ls error in setting_device_info: %ls",
@@ -330,7 +330,7 @@ static bool parse_db_info(QDomElement &e, sw_settings_t &loaded)
     return loaded.db_info.valid;
 }
 
-static bool check_setting_oth_settings(setting_oth_t &oth_info)
+static bool check_setting_oth_settings(setting_oth_t &/*oth_info*/)
 {
     return true;
 }

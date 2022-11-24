@@ -50,6 +50,7 @@
 ****************************************************************************/
 
 #include "serviceinfo.h"
+#include "diy_common_tool.h"
 
 ServiceInfo::ServiceInfo(QLowEnergyService *service):
     m_service(service)
@@ -130,10 +131,44 @@ QString ServiceInfo::getStateStr() const
     if (!m_service)
         return QString();
 
-    return QString(ble_serv_state_str_list[(int)(m_service->state())]);
+    int idx = (int)(m_service->state());
+    QString err;
+    if((idx >= 0) && (idx < DIY_SIZE_OF_ARRAY(ble_serv_state_str_list)))
+    {
+        err = QString(ble_serv_state_str_list[idx]);
+    }
+    else
+    {
+        err = QString("Unknown Error!");
+    }
+
+    return err;
 }
 
 QString ServiceInfo::getStateStr(QLowEnergyService::ServiceState st)
 {
-    return QString(ble_serv_state_str_list[(int)st]);
+    int idx = (int)(st);
+    QString err;
+    if((idx >= 0) && (idx < DIY_SIZE_OF_ARRAY(ble_serv_state_str_list)))
+    {
+        err = QString(ble_serv_state_str_list[idx]);
+    }
+    else
+    {
+        err = QString("Unknown Error!");
+    }
+    return err;
+}
+
+QString ServiceInfo::getAllInfoStr() const
+{
+    QString info_str("Service Info:\n");
+
+    info_str += "[name: " + getName() + "\n"
+              + " type: " + getType() + "\n"
+              + " uuid: " + getUuid() + "\n"
+              + " whole_uuid: " + getWholeUuid() + "\n"
+              + " class: " + QBluetoothUuid::serviceClassToString((QBluetoothUuid::ServiceClassUuid)m_service->serviceUuid().toUInt16()) + "\n"
+              + " state: " + getStateStr(m_service->state()) + "\n";
+    return info_str;
 }

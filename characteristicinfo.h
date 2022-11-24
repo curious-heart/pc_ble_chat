@@ -73,6 +73,8 @@ public:
     QString getValue() const;
     QString getHandle() const;
     QString getPermission() const;
+    QString getDescs() const;
+    QString getAllInfoStr() const;
     QLowEnergyCharacteristic getCharacteristic() const;
 
 Q_SIGNALS:
