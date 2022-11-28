@@ -83,7 +83,7 @@ public:
 
 signals:
     void sendMessage(const QString &message);
-    void write_data_done_sig();
+    void write_data_done_sig(bool done);
     void turn_on_next_light_sig(int no);
 
 private slots:
@@ -100,7 +100,7 @@ private slots:
 
     void newAdapterSelected();
 
-    void BleServiceCharacteristicWrite(const QLowEnergyCharacteristic &c,
+    void BleServiceCharacteristicWritten(const QLowEnergyCharacteristic &c,
                                        const QByteArray &value);
     void BleServiceCharacteristicRead(const QLowEnergyCharacteristic &c,
                                        const QByteArray &value);
@@ -108,7 +108,7 @@ private slots:
                                          const QByteArray &value);
     void BleServiceError(QLowEnergyService::ServiceError newError);
 
-    void write_data_done_handle();
+    void write_data_done_handle(bool done);
     void turn_on_next_light(int no);
 
     void on_chat_textChanged();
@@ -175,12 +175,14 @@ private:
     QString m_data_no, m_sample_pos, m_skin_type;
     int m_curr_light_no = -1; /*>=0, used to index software data structure.*/
 
+    QTimer m_write_wait_resp_timer;
     QTimer m_write_done_timer;
 
     const char* m_visual_exe_fpn = "../vway_data_visual/dist/vway_data_visual/vway_data_visual.exe";
     void init_write_data();
     void read_notify();
     void write_data_done_notify();
+    void write_wait_resp_timeout();
     void restart_work();
     void start_send_data_to_device();
     bool check_vul_no_dup();

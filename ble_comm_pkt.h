@@ -4,8 +4,9 @@
 #include <QByteArray>
 
 /*Prefix "ORID_" indicates the pkt format of original device.*/
-#define ORID_W_ACK_HDR QByteArray("\x5A\xFF\x11\x00")
-#define ORID_DATA_PKT_HDR QByteArray("\x5A\x11")
-#define ORID_W_FINISH_HDR QByteArray("\x5A\xFF\x11\x02")
+#define ORID_APP_LIGHT_PKT_HDR QByteArray("\x3D\x11")
+#define ORID_DEV_RESP_PKT_HDR QByteArray("\x5A\xFF\x11\x00")
+#define ORID_DEV_DATA_PKT_HDR QByteArray("\x5A\x11")
+#define ORID_DEV_FINISH_PKT_HDR QByteArray("\x5A\xFF\x11\x02")
 
 #endif // BLE_COMM_PKT_H

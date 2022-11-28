@@ -12,6 +12,7 @@ typedef struct _light_info_t
     int lambda; /*波长(nm)*/
     int flash_period; /*点亮时长(ms)*/
     int flash_gap; /*熄灭后到下一个灯点亮前的间隔时间(ms)*/
+    int idx; /*设备内部对灯的编号。从1开始*/
 }light_info_t;
 typedef QMap<int, light_info_t*> light_list_t;
 
@@ -23,6 +24,7 @@ public:
     QString rx_char_uuid, tx_char_uuid;
     QString dev_id;
     light_list_t light_list;
+    int single_light_wait_time;
 
     _ble_dev_info_t()
     {
@@ -47,6 +49,7 @@ public:
         addr = srv_uuid = rx_char_uuid = tx_char_uuid = QString();
         dev_id = QString();
         clear_light_list();
+        single_light_wait_time = 0;
     }
     void log_print()
     {

@@ -37,14 +37,14 @@ void Logger::writeLog(QString fileName, int lineNo, LOG_LEVEL level, QString msg
     if(!dir.exists())
         dir.mkpath(path);
     QString date=QDateTime::currentDateTime().toString("yyyy-MM-dd");
-    QString time=QDateTime::currentDateTime().toString("hh:mm:ss");
+    QString time=QDateTime::currentDateTime().toString("hh:mm:ss.zzz");
     QFile file(QString(log_dir_str) + QString("/")
                + QString(log_file_str) + QString("_%1.txt").arg(date));
     if(!file.open(QFile::WriteOnly | QFile::Append))
         return;
     QTextStream in(&file);
-    in<<"\t"<<date<<" "<<time<<"  "<<fileName<<"  ["<<lineNo<<"]"<<"  ["<<levels[level]<<"]\r\n";
-    in<<msg<<"\r\n";
+    in<<"\t"<<date<<" "<<time<<"  "<<fileName<<"  ["<<lineNo<<"]"<<"  ["<<levels[level]<<"]\n";
+    in<<msg<<"\n";
     file.flush();
     file.close();
 }

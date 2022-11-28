@@ -19,6 +19,8 @@ static inline QString light_elem() {return QStringLiteral("light");}
 static inline QString lambda_elem() {return QStringLiteral("lambda");}
 static inline QString flash_period_elem() { return QStringLiteral("flash_period");}
 static inline QString flash_gap_elem() { return QStringLiteral("flash_gap");}
+static inline QString idx_elem() { return QStringLiteral("idx");}
+static inline QString single_light_wait_time_elem() { return QStringLiteral("single_light_wait_time");}
 
 static inline QString db_info_elem() { return QStringLiteral("db_info");}
 static inline QString srvr_addr_elem() { return QStringLiteral("srvr_addr");}
@@ -151,6 +153,18 @@ static bool parse_light_list(QDomElement &e, light_list_t & light_list)
                     in->flash_gap = g_def_light_flash_gap;
                 }
 
+                ok = false;
+                in->idx = light_e.namedItem(idx_elem()).toElement().text().toInt(&ok);
+                if(!ok)
+                {
+                    DIY_LOG(LOG_LEVEL::LOG_WARN,
+                            "Invlaid %ls in lambda %d: %ls.",
+                            idx_elem().utf16(),
+                            in->lambda,
+                            light_e.namedItem(idx_elem()).toElement().text().utf16());
+                    in->idx = g_min_light_idx_m1;
+                }
+
                 light_list.insert(in->lambda, in);
             }
             else
@@ -230,6 +244,15 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
                     {
                         dev_info->clear_light_list();
                     }
+                }
+                else if(info_e.tagName() == single_light_wait_time_elem())
+                {
+                   bool ok;
+                   dev_info->single_light_wait_time = info_e.text().toInt(&ok);
+                   if(!ok)
+                   {
+                       dev_info->single_light_wait_time = g_def_single_light_wait_time;
+                   }
                 }
                 else
                 {
@@ -463,5 +486,34 @@ void load_sw_settings(sw_settings_t &sw_s)
             }
         }
         ++it;
+    }
+
+    //check single_light_wait_time and fill light idx.
+    QMap<QString, setting_ble_dev_info_t*>::Iterator dev_it = sw_s.ble_dev_list.begin();
+    light_list_t::Iterator light_it;
+    int w_t, cur_v, pre_light_idx;
+    while(dev_it != sw_s.ble_dev_list.end())
+    {
+        light_it = dev_it.value()->light_list.begin();
+        w_t = dev_it.value()->single_light_wait_time;
+        pre_light_idx = g_min_light_idx_m1;
+        while(light_it != dev_it.value()->light_list.end())
+        {
+            cur_v = (light_it.value()->flash_period + light_it.value()->flash_gap) * 2;
+            if(w_t < cur_v) { w_t = cur_v;}
+            if(light_it.value()->idx <= g_min_light_idx_m1)
+            {
+                light_it.value()->idx = pre_light_idx + 1;
+            }
+            pre_light_idx = light_it.value()->idx;
+            /*
+            DIY_LOG(LOG_LEVEL::LOG_INFO, "lambda:%d, idx: %d",
+                    light_it.value()->lambda, light_it.value()->idx);
+                    */
+            ++light_it;
+        }
+        dev_it.value()->single_light_wait_time = w_t;
+        //DIY_LOG(LOG_LEVEL::LOG_INFO, "wait time:%d", dev_it.value()->single_light_wait_time);
+        ++dev_it;
     }
 }
