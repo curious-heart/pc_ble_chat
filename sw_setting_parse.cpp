@@ -2,14 +2,15 @@
 #include <QFile>
 #include <QMap>
 
+#include "logger.h"
 #include "sw_setting_parse.h"
 #include "types_and_defs.h"
 #include "diy_common_tool.h"
-#include "logger.h"
+#include "ble_comm_pkt.h"
 
 static inline QString ble_dev_list_elem() { return QStringLiteral("ble_dev_list");}
 static inline QString dev_elem() { return QStringLiteral("dev");}
-static inline QString dev_id_elem() { return QStringLiteral("dev_id");}
+static inline QString dev_type_elem() { return QStringLiteral("dev_type");}
 static inline QString addr_elem() { return QStringLiteral("addr");}
 static inline QString srv_uuid_elem() { return QStringLiteral("srv_uuid");}
 static inline QString rx_char_elem() { return QStringLiteral("rx_char");}
@@ -186,13 +187,24 @@ static bool parse_light_list(QDomElement &e, light_list_t & light_list)
     return valid ;
 }
 
-static void take_default_lights(light_list_t &light_list)
+static void take_default_lights(light_list_t &light_list, QString &dev_type)
 {
-    for(int i = 0; i < g_def_light_num; i++)
+    int_array_num_t *def_lights;
+    if(!g_def_values.dev_type_def_light_map.contains(dev_type))
+    {
+        DIY_LOG(LOG_LEVEL::LOG_WARN, "Unknown %ls:%ls, use default:%ls",
+                dev_type_elem().utf16(), dev_type.utf16(), CLONE_DEV_TYPE_STR.utf16());
+        def_lights = &(g_def_values.dev_type_def_light_map[CLONE_DEV_TYPE_STR]);
+    }
+    else
+    {
+        def_lights = &(g_def_values.dev_type_def_light_map[dev_type]);
+    }
+    for(int i = 0; i < def_lights->num; i++)
     {
         light_info_t * in = new light_info_t;
         assert(in != nullptr);
-        in->lambda = g_def_lambda_list[i];
+        in->lambda = def_lights->d_arr[i];
         in->flash_period = g_def_light_flash_period;
         in->flash_gap= g_def_light_flash_gap;
 
@@ -221,9 +233,9 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
                 {
                     dev_info->addr = info_e.text();
                 }
-                else if(info_e.tagName() == dev_id_elem())
+                else if(info_e.tagName() == dev_type_elem())
                 {
-                    dev_info->dev_id = info_e.text();
+                    dev_info->dev_type = info_e.text();
                 }
                 else if(info_e.tagName() == srv_uuid_elem())
                 {
@@ -265,11 +277,18 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
             //validation of dev_info
             if(check_setting_device_info(*dev_info) && valid_light_list)
             {
+                if(dev_info->dev_type.isEmpty())
+                {
+                    DIY_LOG(LOG_LEVEL::LOG_INFO, "Device type is empty, use %ls",
+                            CLONE_DEV_TYPE_STR.utf16());
+                    dev_info->dev_type = CLONE_DEV_TYPE_STR;
+                }
+
                 if(dev_info->light_list.isEmpty())
                 {//fill in default lights.
                     DIY_LOG(LOG_LEVEL::LOG_INFO,
                             "Light is is taken as empty in xml file, use default light list.");
-                    take_default_lights(dev_info->light_list);
+                    take_default_lights(dev_info->light_list, dev_info->dev_type);
                 }
 
                 loaded.ble_dev_list.insert(dev_info->addr, dev_info);
@@ -466,7 +485,9 @@ void load_sw_settings(sw_settings_t &sw_s)
                 ble_dev->srv_uuid = QString(g_def_ble_srv_uuid);
                 ble_dev->rx_char_uuid = QString(g_def_ble_rx_char_uuid);
                 ble_dev->tx_char_uuid = QString(g_def_ble_tx_char_uuid);
-                take_default_lights(ble_dev->light_list);
+                ble_dev->dev_type = CLONE_DEV_TYPE_STR;
+                take_default_lights(ble_dev->light_list, ble_dev->dev_type);
+                ble_dev->single_light_wait_time = g_def_single_light_wait_time;
                 sw_s.ble_dev_list.insert(ble_dev->addr, ble_dev);
             }
             else if(it.key() == db_info_elem())

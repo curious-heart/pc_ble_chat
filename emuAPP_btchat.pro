@@ -7,6 +7,7 @@ requires(qtConfig(listwidget))
 android: QT += androidextras
 
 SOURCES = \
+    ble_comm_pkt.cpp \
     characteristicinfo.cpp \
     diy_common_tool.cpp \
     logger.cpp \

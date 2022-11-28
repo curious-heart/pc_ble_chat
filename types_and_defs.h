@@ -3,6 +3,11 @@
 
 #include <QStringList>
 #include <QString>
+#include <QMap>
+#include <QList>
+#include <QByteArray>
+#include "diy_common_tool.h"
+#include "ble_comm_pkt.h"
 
 extern QStringList g_skin_type;
 extern QStringList g_sample_pos;
@@ -24,12 +29,28 @@ extern const char * g_def_dev_id_prefix;
 extern const int g_def_single_light_wait_time;
 extern const int g_min_light_idx_m1;
 
-extern const int g_def_light_num;
-extern const int g_def_lambda_list[];
 extern const int g_max_light_flash_period;
 extern const int g_min_light_flash_period;
 extern const int g_def_light_flash_period;
 extern const int g_max_light_flash_gap;
 extern const int g_min_light_flash_gap;
 extern const int g_def_light_flash_gap;
+
+typedef struct _int_array_num_t
+{
+    const int * d_arr;
+    int num;
+}int_array_num_t;
+
+class TypesAndDefs_T
+{
+public:
+    QMap<QString, int_array_num_t> dev_type_def_light_map;
+
+    TypesAndDefs_T();
+    ~TypesAndDefs_T();
+};
+
+extern TypesAndDefs_T g_def_values;
+
 #endif // TYPES_AND_DEFS_H

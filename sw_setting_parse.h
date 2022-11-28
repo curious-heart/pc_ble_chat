@@ -22,7 +22,7 @@ public:
     QString addr;
     QString srv_uuid;
     QString rx_char_uuid, tx_char_uuid;
-    QString dev_id;
+    QString dev_type;
     light_list_t light_list;
     int single_light_wait_time;
 
@@ -47,14 +47,14 @@ public:
     void clear_all()
     {
         addr = srv_uuid = rx_char_uuid = tx_char_uuid = QString();
-        dev_id = QString();
+        dev_type = QString();
         clear_light_list();
         single_light_wait_time = 0;
     }
     void log_print()
     {
        qDebug() << "dev addr: " << addr << ","
-                << "dev dev_id: " << dev_id << ","
+                << "dev dev_type: " << dev_type << ","
                 << "dev srv_uuid: " << srv_uuid << ","
                 << "dev rx_char_uuid: " << rx_char_uuid << ","
                 << "dev tx_char_uuid: " << tx_char_uuid << "\n";

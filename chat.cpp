@@ -123,7 +123,7 @@ Chat::Chat(QWidget *parent)
     //try to load settings from xml.
     load_sw_settings(m_sw_settings);
 
-    init_write_data();
+    //init_write_data(); //no use now.
 
     connect(&m_write_wait_resp_timer, &QTimer::timeout,
            this, &Chat::write_wait_resp_timeout);
@@ -313,7 +313,7 @@ void Chat::connectClicked()
             return;
         }
 
-        m_light_num = m_work_dev_info->light_list.count();
+        m_curr_light_no = m_work_dev_info->light_list.begin();
 
         connect(m_service->service(), &QLowEnergyService::characteristicWritten,
                 this, &Chat::BleServiceCharacteristicWritten);
@@ -507,48 +507,43 @@ void Chat::start_send_data_to_device()
         ui->sendButton->setEnabled(false);
         ui->calibrationButton->setEnabled(false);
 
-        if (ui->sendText->text().length() >0)
+        QByteArray bytes_to_send;
+        bool gen_pkt_ok;
+        if (!m_calibrating && ui->sendText->text().length() >0)
         {
             m_single_light_write = true;
             QString send_txt = ui->sendText->text();
-            qDebug() << "Ori txt:" << send_txt;
             send_txt.remove(' ');
-            qDebug() << "Space removed:" << send_txt;
-            QByteArray send_data = QByteArray::fromHex(send_txt.toUtf8());
-            qDebug() << "hex data:" << QByteHexString(send_data);
-            quint8 data_crc8 = diy_crc8_8210(send_data, send_data.length());
-            send_data.append(data_crc8);
-            qDebug() << "hex data with crc:" << QByteHexString(send_data);
-
-            DIY_LOG(LOG_LEVEL::LOG_INFO,
-                    "<<<<<<<<Now write Char %ls, %ls\n",
-                    m_tx_char->getUuid().utf16(), QString(send_data.toHex(' ')).utf16());
-            m_service->service()->writeCharacteristic(m_tx_char->getCharacteristic(),
-                                                      send_data);
-            m_write_wait_resp_timer.start(m_work_dev_info->single_light_wait_time);
-            DIY_LOG(LOG_LEVEL::LOG_INFO, "\tWrite end.");
-            //QThread::msleep(500);
+            bytes_to_send = QByteArray::fromHex(send_txt.toUtf8());
+            quint8 data_crc8 = diy_crc8_8210(bytes_to_send, bytes_to_send.count());
+            bytes_to_send.append(data_crc8);
+            gen_pkt_ok = true;
         }
         else
         {
             m_single_light_write = false;
-            m_curr_light_no = 0;
+            m_curr_light_no = m_work_dev_info->light_list.begin();
+            gen_pkt_ok = ble_comm_gen_app_light_pkt(bytes_to_send,
+                                       m_curr_light_no.value()->idx, m_work_dev_info->dev_type);
+        }
+
+        if(gen_pkt_ok)
+        {
             DIY_LOG(LOG_LEVEL::LOG_INFO,
                     "<<<<<<<<Now write Char %ls, %ls\n",
                     m_tx_char->getUuid().utf16(),
-                    QString(m_write_data_list[m_curr_light_no].toHex(' ')).utf16());
+                    QByteHexString(bytes_to_send).utf16());
             m_service->service()->writeCharacteristic(m_tx_char->getCharacteristic(),
-                                                      m_write_data_list[m_curr_light_no]);
+                                                      bytes_to_send);
             DIY_LOG(LOG_LEVEL::LOG_INFO, "Start write wait timer...");
             m_write_wait_resp_timer.start(m_work_dev_info->single_light_wait_time);
             DIY_LOG(LOG_LEVEL::LOG_INFO, "\tWrite end.");
-            /*
-            for(int i=0; i < m_light_num; i++)
-            {
-                m_service->service()->writeCharacteristic(m_tx_char->getCharacteristic(),
-                                                          m_write_data_list[i]);
-                QThread::msleep(500);
-            }*/
+        }
+        else
+        {
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Generate packet error!");
+            QMessageBox::critical(nullptr, "!!!", "Generate packet error!");
+            return;
         }
     }
     else
@@ -625,7 +620,7 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
         {
             m_write_wait_resp_timer.stop();
         }
-        if((m_curr_light_no < m_light_num) && !m_single_light_write)
+        if(!m_single_light_write && (m_curr_light_no != m_work_dev_info->light_list.end()))
         {
             DIY_LOG(LOG_LEVEL::LOG_INFO, "Now turn on next light.");
             emit turn_on_next_light_sig(m_curr_light_no);
@@ -637,8 +632,8 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
                 m_all_rec_file.flush();
             }
             m_txt_file.flush();
+            m_curr_light_no = m_work_dev_info->light_list.begin();
             m_write_done_timer.start(500);
-            m_curr_light_no = 0;
         }
     }
     else
@@ -653,18 +648,30 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
     //DIY_LOG(LOG_LEVEL::LOG_INFO, "%ls", cInfo.getAllInfoStr().utf16());
 }
 
-void Chat::turn_on_next_light(int no)
+void Chat::turn_on_next_light(light_list_t::Iterator no)
 {
-    if(no < m_light_num)
+    if(no != m_work_dev_info->light_list.end())
     {
-        DIY_LOG(LOG_LEVEL::LOG_INFO,
-                "<<<<<<<<Now write Char %ls, %ls\n",
-                m_tx_char->getUuid().utf16(),
-                QString(m_write_data_list[no].toHex(' ')).utf16());
-        m_service->service()->writeCharacteristic(m_tx_char->getCharacteristic(),
-                                                  m_write_data_list[no]);
-        m_write_wait_resp_timer.start(m_work_dev_info->single_light_wait_time);
-        DIY_LOG(LOG_LEVEL::LOG_INFO, "\tWrite end.");
+        QByteArray bytes_to_send;
+        bool gen_pkt_ok =  ble_comm_gen_app_light_pkt(bytes_to_send,
+                                                      m_curr_light_no.value()->idx,
+                                                      m_work_dev_info->dev_type);
+        if(gen_pkt_ok)
+        {
+            DIY_LOG(LOG_LEVEL::LOG_INFO,
+                    "<<<<<<<<Now write Char %ls, %ls\n",
+                    m_tx_char->getUuid().utf16(),
+                    QByteHexString(bytes_to_send).utf16());
+            m_service->service()->writeCharacteristic(m_tx_char->getCharacteristic(),
+                                                      bytes_to_send);
+            m_write_wait_resp_timer.start(m_work_dev_info->single_light_wait_time);
+            DIY_LOG(LOG_LEVEL::LOG_INFO, "\tWrite end.");
+        }
+        else
+        {
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Generate packet error!");
+            QMessageBox::critical(nullptr, "!!!", "Generate packet error!");
+        }
     }
 }
 
@@ -720,7 +727,9 @@ void Chat::write_data_done_handle(bool done)
         }
         else
         {
-            err = QString("超时，未收到第%1个灯的数据。结束！").arg(m_curr_light_no);
+            err = QString("超时，未收到波长=%1，idx=%2的灯光数据。结束！").\
+                    arg(m_curr_light_no.value()->lambda).\
+                    arg(m_curr_light_no.value()->idx);
         }
         title = "!!!";
     }
@@ -777,6 +786,7 @@ void Chat::on_disconnButton_clicked()
     }
 }
 
+/*no use now. we generate data packet dynamicly
 void Chat::init_write_data()
 {
     unsigned char write_data[][m_write_data_len]=
@@ -845,6 +855,7 @@ void Chat::init_write_data()
         m_write_data_list.append(QByteArray((const char*)write_data[i], m_write_data_len));
     }
 }
+*/
 
 void Chat::on_clearButton_clicked()
 {

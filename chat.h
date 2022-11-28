@@ -84,7 +84,7 @@ public:
 signals:
     void sendMessage(const QString &message);
     void write_data_done_sig(bool done);
-    void turn_on_next_light_sig(int no);
+    void turn_on_next_light_sig(light_list_t::Iterator no);
 
 private slots:
     void connectClicked();
@@ -109,7 +109,7 @@ private slots:
     void BleServiceError(QLowEnergyService::ServiceError newError);
 
     void write_data_done_handle(bool done);
-    void turn_on_next_light(int no);
+    void turn_on_next_light(light_list_t::Iterator no);
 
     void on_chat_textChanged();
 
@@ -144,8 +144,7 @@ private:
     QBluetoothAddress m_adapter;
 
     RemoteSelector* m_remoteSelector = nullptr;
-    QList<QByteArray> m_write_data_list;
-    int m_light_num = g_def_light_num;
+    //QList<QByteArray> m_write_data_list;
     static const int m_write_data_len = 20;
     static const unsigned char m_light_idx_pos = 2;
     ServiceInfo * m_service = nullptr;
@@ -173,13 +172,13 @@ private:
     bool m_only_rec_valid_data = true;
     QString m_curr_file_bn_str;
     QString m_data_no, m_sample_pos, m_skin_type;
-    int m_curr_light_no = -1; /*>=0, used to index software data structure.*/
+    light_list_t::Iterator m_curr_light_no; /* used to traverse light_list.*/
 
     QTimer m_write_wait_resp_timer;
     QTimer m_write_done_timer;
 
     const char* m_visual_exe_fpn = "../vway_data_visual/dist/vway_data_visual/vway_data_visual.exe";
-    void init_write_data();
+    //void init_write_data(); //no use now. we generate data packet dynamicly.
     void read_notify();
     void write_data_done_notify();
     void write_wait_resp_timeout();
