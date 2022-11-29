@@ -166,7 +166,8 @@ private:
     QFile m_all_rec_file, m_txt_file;
     bool m_single_light_write = false;
     bool m_calibrating = false;
-    const char* m_calibration_file_name_apx = "校准";
+    const char* m_calibration_no = "0000", *m_calibration_pos = "cal";
+    const char* m_calibration_file_name_apx = "_校准";
     const char* m_txt_ext = ".txt";
     bool m_all_dev_scan = false;
     bool m_only_rec_valid_data = true;
@@ -184,7 +185,7 @@ private:
     void write_wait_resp_timeout();
     void restart_work();
     void start_send_data_to_device();
-    bool check_vul_no_dup();
+    bool check_vul_info();
     bool check_and_mkpth();
     bool prepare_qfile_for_start();
 

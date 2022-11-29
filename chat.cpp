@@ -362,8 +362,26 @@ void Chat::on_calibrationButton_clicked()
  *      true: go on.
  *      false: stop.
 */
-bool Chat::check_vul_no_dup()
+bool Chat::check_vul_info()
 {
+    if(m_calibrating)
+    {
+        return true;
+    }
+
+    QString pos_str, skin_type_str;
+    pos_str = ui->posComboBox->currentText();
+    skin_type_str = ui->skinTypeComboBox->currentText();
+    if(pos_str.isEmpty() || skin_type_str.isEmpty())
+    {
+
+        QString err = QString("%1和%2不能为空！").arg(ui->posLabel->text(),
+                                                ui->skinTypeLabel->text());
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+        QMessageBox::critical(nullptr, "!!!", err);
+        return false;
+    }
+
     QString curr_no, err_str = "";
     curr_no = ui->numberTextEdit->toPlainText();
     if(curr_no.isEmpty())
@@ -418,8 +436,16 @@ bool Chat::check_and_mkpth()
 
 bool Chat::prepare_qfile_for_start()
 {
-    m_data_no = ui->numberTextEdit->toPlainText();
-    m_sample_pos = ui->posComboBox->currentText();
+    if(m_calibrating)
+    {
+        m_sample_pos = m_calibration_pos;
+        m_data_no = m_calibration_no;
+    }
+    else
+    {
+        m_sample_pos = ui->posComboBox->currentText();
+        m_data_no = ui->numberTextEdit->toPlainText();
+    }
     m_skin_type = ui->skinTypeComboBox->currentText();
 
     QString s_info_str = m_data_no + "_" + m_sample_pos + "---";
@@ -427,7 +453,7 @@ bool Chat::prepare_qfile_for_start()
     m_curr_file_bn_str =  s_info_str + dtms_str;
     QString all_rec_pf_str = m_all_rec_pth_str + "/"
                              + m_curr_file_bn_str + m_all_rec_file_name_apx;
-    QString txt_file_pf_str = m_data_pth_str + "/" + m_curr_file_bn_str;
+    QString txt_file_pf_str = m_txt_pth_str + "/" + m_curr_file_bn_str;
     if(m_calibrating)
     {
         all_rec_pf_str +=  m_calibration_file_name_apx;
@@ -482,7 +508,7 @@ void Chat::start_send_data_to_device()
 
     if(m_tx_char->getCharacteristic().isValid())
     {
-        if(!check_vul_no_dup())
+        if(!check_vul_info())
         {
             return;
         }
