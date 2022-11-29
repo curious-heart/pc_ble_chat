@@ -149,12 +149,14 @@ private:
     const char* m_all_rec_dir_rel_name = "ori_data";
     const char* m_txt_dir_rel_name = "txt";
     const char* m_csv_dir_rel_name = "csv";
-    const char* m_merged_data_file_rel_name = "datum.csv"; /*all valid file are merged into here.*/
+    const char* m_local_dbcsv_dir_rel_name = "dbcsv";
+    const char* m_local_dbview_file_rel_name = "datum_view.csv"; /*all valid file are merged into here.*/
     const char* m_all_rec_file_name_apx = "_all";
     QString m_data_pth_str; /*the "root" path to store received data.*/
     QString m_all_rec_pth_str; /*all received data are stored here.*/
     QString m_txt_pth_str; /*valid data file are stored here in txt format.*/
     QString m_csv_pth_str; /*valid data file are stored here in csv format.*/
+    QString m_local_dbcsv_pth_str;
     QFile m_all_rec_file, m_txt_file;
     bool m_single_light_write = false;
     bool m_calibrating = false;

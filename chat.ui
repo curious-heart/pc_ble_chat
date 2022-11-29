@@ -153,14 +153,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QPlainTextEdit" name="numberTextEdit">
-           <property name="minimumSize">
-            <size>
-             <width>0</width>
-             <height>24</height>
-            </size>
-           </property>
-          </widget>
+          <widget class="QLineEdit" name="numberTextEdit"/>
          </item>
          <item>
           <widget class="QLabel" name="posLabel">

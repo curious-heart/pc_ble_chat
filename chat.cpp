@@ -126,6 +126,7 @@ Chat::Chat(QWidget *parent)
     m_all_rec_pth_str= m_data_pth_str + "/" + QString(m_all_rec_dir_rel_name);
     m_txt_pth_str = m_data_pth_str  + "/" + QString(m_txt_dir_rel_name);
     m_csv_pth_str = m_data_pth_str  + "/" + QString(m_csv_dir_rel_name);
+    m_local_dbcsv_pth_str = m_data_pth_str + "/" + QString(m_local_dbcsv_dir_rel_name);
 
     m_adapter = localAdapters.isEmpty() ? QBluetoothAddress() :
                            localAdapters.at(currentAdapterIndex).address();
@@ -348,7 +349,7 @@ bool Chat::check_vul_info()
     }
 
     QString curr_no, err_str = "";
-    curr_no = ui->numberTextEdit->toPlainText();
+    curr_no = ui->numberTextEdit->text();
     if(curr_no.isEmpty())
     {
         err_str = "编号为空，请确认是否继续！";
@@ -382,6 +383,7 @@ bool Chat::check_and_mkpth()
         {m_txt_pth_str, true},
         {m_csv_pth_str, true},
         {m_all_rec_pth_str, !m_only_rec_valid_data},
+        {m_local_dbcsv_pth_str, true},
     };
 
     for(int i = 0; i < DIY_SIZE_OF_ARRAY(pth_str_list); i++)
@@ -409,7 +411,7 @@ bool Chat::prepare_qfile_for_start()
     else
     {
         m_sample_pos = ui->posComboBox->currentText();
-        m_data_no = ui->numberTextEdit->toPlainText();
+        m_data_no = ui->numberTextEdit->text();
     }
     m_skin_type = ui->skinTypeComboBox->currentText();
 
@@ -862,6 +864,7 @@ void Chat::on_choosePathButton_clicked()
         m_all_rec_pth_str = m_data_pth_str + "/" + QString(m_all_rec_dir_rel_name);
         m_txt_pth_str = m_data_pth_str  + "/" + QString(m_txt_dir_rel_name);
         m_csv_pth_str = m_data_pth_str  + "/" + QString(m_csv_dir_rel_name);
+        m_local_dbcsv_pth_str = m_data_pth_str + "/" + QString(m_local_dbcsv_dir_rel_name);
         m_dir_ready = false;
     }
     ui->storePathDisplay->setText(m_data_pth_str);
