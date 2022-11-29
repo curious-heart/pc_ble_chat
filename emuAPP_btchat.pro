@@ -14,8 +14,6 @@ SOURCES = \
     main.cpp \
     chat.cpp \
     remoteselector.cpp \
-    chatserver.cpp \
-    chatclient.cpp \
     serviceinfo.cpp \
     sw_setting_parse.cpp \
     types_and_defs.cpp
@@ -27,8 +25,6 @@ HEADERS = \
     diy_common_tool.h \
     logger.h \
     remoteselector.h \
-    chatserver.h \
-    chatclient.h \
     serviceinfo.h \
     sw_setting_parse.h \
     types_and_defs.h

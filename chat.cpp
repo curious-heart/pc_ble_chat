@@ -49,8 +49,6 @@
 ****************************************************************************/
 
 #include "chat.h"
-#include "chatserver.h"
-#include "chatclient.h"
 
 #include <QtCore/qdebug.h>
 
@@ -103,19 +101,6 @@ Chat::Chat(QWidget *parent)
         adapter.setHostMode(QBluetoothLocalDevice::HostDiscoverable);
     }
 
-    /*
-    //! [Create Chat Server]
-    server = new ChatServer(this);
-    connect(server, QOverload<const QString &>::of(&ChatServer::clientConnected),
-            this, &Chat::clientConnected);
-    connect(server, QOverload<const QString &>::of(&ChatServer::clientDisconnected),
-            this,  QOverload<const QString &>::of(&Chat::clientDisconnected));
-    connect(server, &ChatServer::messageReceived,
-            this,  &Chat::showMessage);
-    connect(this, &Chat::sendMessage, server, &ChatServer::sendMessage);
-    server->startServer();
-    //! [Create Chat Server]
-    */
     //! [Get local device name]
     localName = QBluetoothLocalDevice().name();
     //! [Get local device name]
@@ -177,8 +162,6 @@ Chat::Chat(QWidget *parent)
 
 Chat::~Chat()
 {
-    qDeleteAll(clients);
-    delete server;
     delete m_remoteSelector;
 
     if(m_file_write_ready)
@@ -193,17 +176,10 @@ Chat::~Chat()
     clear_loaded_settings(m_sw_settings);
 }
 
-//! [clientConnected clientDisconnected]
 void Chat::clientConnected(const QString &name)
 {
     ui->chat->insertPlainText(QString::fromLatin1("%1 has joined chat.\n").arg(name));
 }
-
-void Chat::clientDisconnected(const QString &name)
-{
-    ui->chat->insertPlainText(QString::fromLatin1("%1 has left.\n").arg(name));
-}
-//! [clientConnected clientDisconnected]
 
 //! [connected]
 void Chat::connected(const QString &name)
@@ -242,17 +218,6 @@ void Chat::reactOnSocketError(const QString &error)
 {
     ui->chat->insertPlainText(error);
 }
-
-//! [clientDisconnected]
-void Chat::clientDisconnected()
-{
-    ChatClient *client = qobject_cast<ChatClient *>(sender());
-    if (client) {
-        clients.removeOne(client);
-        client->deleteLater();
-    }
-}
-//! [clientDisconnected]
 
 //! [Connect to remote service]
 void Chat::connectClicked()
@@ -586,14 +551,6 @@ void Chat::showMessage(const QString &sender, const QString &message)
     ui->chat->ensureCursorVisible();
 }
 //! [showMessage]
-
-void Chat::read_notify()
-{
-    if(m_service)
-    {
-        m_service->service()->readCharacteristic(m_rx_char->getCharacteristic());
-    }
-}
 
 void Chat::BleServiceCharacteristicRead(const QLowEnergyCharacteristic &c,
                                         const QByteArray &value)

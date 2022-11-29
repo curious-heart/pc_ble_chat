@@ -64,13 +64,9 @@
 #include <QDomDocument>
 #include <QList>
 
-#include "types_and_defs.h"
 #include "sw_setting_parse.h"
 
 QT_USE_NAMESPACE
-
-class ChatServer;
-class ChatClient;
 
 //! [declaration]
 class Chat : public QDialog
@@ -93,8 +89,6 @@ private slots:
     void showMessage(const QString &sender, const QString &message);
 
     void clientConnected(const QString &name);
-    void clientDisconnected(const QString &name);
-    void clientDisconnected();
     void connected(const QString &name);
     void reactOnSocketError(const QString &error);
 
@@ -136,8 +130,6 @@ private:
     int currentAdapterIndex = 0;
     Ui_Chat *ui;
 
-    ChatServer *server = nullptr;
-    QList<ChatClient *> clients;
     QList<QBluetoothHostInfo> localAdapters;
 
     QString localName;
@@ -180,7 +172,6 @@ private:
 
     const char* m_visual_exe_fpn = "../vway_data_visual/dist/vway_data_visual/vway_data_visual.exe";
     //void init_write_data(); //no use now. we generate data packet dynamicly.
-    void read_notify();
     void write_data_done_notify();
     void write_wait_resp_timeout();
     void restart_work();
