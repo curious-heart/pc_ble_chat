@@ -183,6 +183,16 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QLabel" name="objDescLabel">
+           <property name="text">
+            <string>对象描述</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextEdit" name="objDescTextEdit"/>
+         </item>
         </layout>
        </item>
        <item>
@@ -243,19 +253,6 @@
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QPushButton" name="choosePathButton">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="text">
-          <string>选择存储位置</string>
-         </property>
-        </widget>
-       </item>
       </layout>
      </item>
      <item>
@@ -264,6 +261,9 @@
         <widget class="QLabel" name="storePathLabel">
          <property name="text">
           <string>存储位置：</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
          </property>
         </widget>
        </item>
@@ -283,6 +283,19 @@
          </property>
          <property name="wordWrap">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="choosePathButton">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="text">
+          <string>选择存储位置</string>
          </property>
         </widget>
        </item>
