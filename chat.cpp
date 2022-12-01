@@ -132,6 +132,7 @@ Chat::Chat(QWidget *parent)
                            localAdapters.at(currentAdapterIndex).address();
 
     ui->sendButton->setEnabled(false);
+    ui->manualCmdBtn->setEnabled(false);
     ui->calibrationButton->setEnabled(false);
     ui->disconnButton->setEnabled(false);
     if(m_all_dev_scan)
@@ -226,6 +227,7 @@ void Chat::connectClicked()
     ui->connectButton->setEnabled(false);
     ui->disconnButton->setEnabled(false);
     ui->sendButton->setEnabled(false);
+    ui->manualCmdBtn->setEnabled(false);
     ui->calibrationButton->setEnabled(false);
 
     // scan for services
@@ -300,6 +302,7 @@ void Chat::connectClicked()
         ui->connectButton->setEnabled(false);
         ui->disconnButton->setEnabled(true);
         ui->sendButton->setEnabled(true);
+        set_manual_cmd_btn();
         ui->calibrationButton->setEnabled(true);
     }
     else
@@ -473,7 +476,7 @@ void Chat::start_send_data_to_device()
         m_file_write_ready = false;
     }
 
-    if(m_tx_char->getCharacteristic().isValid())
+    if(m_tx_char && m_tx_char->getCharacteristic().isValid())
     {
         if(!check_vul_info())
         {
@@ -498,6 +501,7 @@ void Chat::start_send_data_to_device()
         ui->connectButton->setEnabled(false);
         ui->disconnButton->setEnabled(false);
         ui->sendButton->setEnabled(false);
+        ui->manualCmdBtn->setEnabled(false);
         ui->calibrationButton->setEnabled(false);
 
         QByteArray bytes_to_send;
@@ -542,7 +546,7 @@ void Chat::start_send_data_to_device()
     else
     {
         DIY_LOG(LOG_LEVEL::LOG_INFO,"No valid characteristic!");
-        QMessageBox::question(nullptr, "!!!", "No valid characteristic!");
+        QMessageBox::critical(nullptr, "!!!", "No valid characteristic!");
     }
 }
 
@@ -723,6 +727,7 @@ void Chat::write_data_done_handle(bool done)
     ui->connectButton->setEnabled(false);
     ui->disconnButton->setEnabled(true);
     ui->sendButton->setEnabled(true);
+    set_manual_cmd_btn();
     ui->calibrationButton->setEnabled(true);
     m_write_done_timer.stop();
     if(m_file_write_ready)
@@ -752,6 +757,7 @@ void Chat::restart_work()
     m_work_dev_info = nullptr;
 
     ui->sendButton->setEnabled(false);
+    set_manual_cmd_btn();
     ui->calibrationButton->setEnabled(false);
     ui->connectButton->setEnabled(true);
     ui->disconnButton->setEnabled(false);
@@ -946,3 +952,34 @@ void Chat::on_currFileradioButton_clicked()
 void Chat::on_folderradioButton_clicked()
 {
 }
+
+void Chat::on_manualCmdBtn_clicked()
+{
+    if(ui->sendText->text().length() <= 0)
+    {
+        QMessageBox::critical(nullptr, "!!!", "请输入命令（十六进制字符串，可以包含空格）!");
+        return;
+    }
+    start_send_data_to_device();
+}
+
+void Chat::set_manual_cmd_btn()
+{
+    if(ui->sendText->text().isEmpty())
+    {
+        ui->manualCmdBtn->setEnabled(false);
+    }
+    else
+    {
+        ui->manualCmdBtn->setEnabled(true);
+    }
+}
+
+void Chat::on_sendText_textEdited(const QString &/*arg1*/)
+{
+    if(ui->sendButton->isEnabled())
+    {
+        set_manual_cmd_btn();
+    }
+}
+

@@ -125,6 +125,10 @@ private slots:
 
     void on_folderradioButton_clicked();
 
+    void on_manualCmdBtn_clicked();
+
+    void on_sendText_textEdited(const QString &arg1);
+
 private:
     int adapterFromUserSelection() const;
     int currentAdapterIndex = 0;
@@ -181,6 +185,7 @@ private:
     bool check_vul_info();
     bool check_and_mkpth();
     bool prepare_qfile_for_start();
+    void set_manual_cmd_btn();
 
     sw_settings_t m_sw_settings;
 public:
