@@ -163,3 +163,16 @@ quint8 diy_crc8_8210(const QByteArray &data, int len)
     }
     return crc8;
 }
+
+/*Begin:setting_db_info_t member function definition.*/
+void setting_db_info_t::log_print()
+{
+    qDebug() << "db_info srvr_addr:" << srvr_addr << ","
+             << "db_info srvr_port:" << srvr_port << ","
+             << "db_info db_name:" << db_name << ","
+             << "db_info login_id:" << login_id << ","
+             << "db_info login_pwd:" << login_pwd << ","
+             << "db_info dbms_name:" << dbms_name << ","
+             << "db_info dbms_ver:" << dbms_ver << "\n";
+}
+/*End:setting_db_info_t member function definition.*/

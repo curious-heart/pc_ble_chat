@@ -65,6 +65,7 @@
 #include <QList>
 
 #include "sw_setting_parse.h"
+#include "sqldb_works.h"
 
 QT_USE_NAMESPACE
 
@@ -153,14 +154,14 @@ private:
     const char* m_all_rec_dir_rel_name = "ori_data";
     const char* m_txt_dir_rel_name = "txt";
     const char* m_csv_dir_rel_name = "csv";
-    const char* m_local_dbcsv_dir_rel_name = "dbcsv";
+    const char* m_local_db_dir_rel_name = "local_db";
     const char* m_local_dbview_file_rel_name = "datum_view.csv"; /*all valid file are merged into here.*/
     const char* m_all_rec_file_name_apx = "_all";
     QString m_data_pth_str; /*the "root" path to store received data.*/
     QString m_all_rec_pth_str; /*all received data are stored here.*/
     QString m_txt_pth_str; /*valid data file are stored here in txt format.*/
     QString m_csv_pth_str; /*valid data file are stored here in csv format.*/
-    QString m_local_dbcsv_pth_str;
+    QString m_local_db_pth_str;
     QFile m_all_rec_file, m_txt_file;
     bool m_single_light_write = false;
     bool m_calibrating = false;
@@ -170,8 +171,11 @@ private:
     bool m_all_dev_scan = false;
     bool m_only_rec_valid_data = true;
     QString m_curr_file_bn_str;
-    QString m_data_no, m_sample_pos, m_skin_type;
+    QString m_data_no, m_sample_pos, m_skin_type, m_obj_desc;
+    QString m_dev_id, m_dev_desc;
+    QString m_expt_id, m_expt_desc;
     light_list_t::Iterator m_curr_light_no; /* used to traverse light_list.*/
+    SkinDatabase m_skin_db;
 
     QTimer m_write_wait_resp_timer;
     QTimer m_write_done_timer;
@@ -181,8 +185,8 @@ private:
     void write_data_done_notify();
     void write_wait_resp_timeout();
     void restart_work();
-    void start_send_data_to_device();
-    bool check_vul_info();
+    void start_send_data_to_device(bool single_cmd);
+    bool check_volu_info();
     bool check_and_mkpth();
     bool prepare_qfile_for_start();
     void set_manual_cmd_btn();

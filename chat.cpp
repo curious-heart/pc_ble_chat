@@ -107,6 +107,14 @@ Chat::Chat(QWidget *parent)
 
     //try to load settings from xml.
     load_sw_settings(m_sw_settings);
+    if(m_sw_settings.oth_settings.use_remote_db)
+    {
+        m_skin_db.set_remote_db_info(&m_sw_settings.db_info);
+    }
+    else
+    {
+        m_skin_db.set_remote_db_info(nullptr);
+    }
 
     //init_write_data(); //no use now.
 
@@ -126,7 +134,7 @@ Chat::Chat(QWidget *parent)
     m_all_rec_pth_str= m_data_pth_str + "/" + QString(m_all_rec_dir_rel_name);
     m_txt_pth_str = m_data_pth_str  + "/" + QString(m_txt_dir_rel_name);
     m_csv_pth_str = m_data_pth_str  + "/" + QString(m_csv_dir_rel_name);
-    m_local_dbcsv_pth_str = m_data_pth_str + "/" + QString(m_local_dbcsv_dir_rel_name);
+    m_local_db_pth_str = m_data_pth_str + "/" + QString(m_local_db_dir_rel_name);
 
     m_adapter = localAdapters.isEmpty() ? QBluetoothAddress() :
                            localAdapters.at(currentAdapterIndex).address();
@@ -224,6 +232,7 @@ void Chat::reactOnSocketError(const QString &error)
 //! [Connect to remote service]
 void Chat::connectClicked()
 {
+
     ui->connectButton->setEnabled(false);
     ui->disconnButton->setEnabled(false);
     ui->sendButton->setEnabled(false);
@@ -316,14 +325,14 @@ void Chat::connectClicked()
 void Chat::sendClicked()
 {
     m_calibrating = false;
-    start_send_data_to_device();
+    start_send_data_to_device(false);
 }
 
 void Chat::on_calibrationButton_clicked()
 {
     m_calibrating = true;
     QMessageBox::information(nullptr, "提示：", "请将设备放置在无遮挡的位置进行校准");
-    start_send_data_to_device();
+    start_send_data_to_device(false);
 }
 
 /*
@@ -331,7 +340,7 @@ void Chat::on_calibrationButton_clicked()
  *      true: go on.
  *      false: stop.
 */
-bool Chat::check_vul_info()
+bool Chat::check_volu_info()
 {
     if(m_calibrating)
     {
@@ -386,7 +395,7 @@ bool Chat::check_and_mkpth()
         {m_txt_pth_str, true},
         {m_csv_pth_str, true},
         {m_all_rec_pth_str, !m_only_rec_valid_data},
-        {m_local_dbcsv_pth_str, true},
+        {m_local_db_pth_str, true},
     };
 
     for(int i = 0; i < DIY_SIZE_OF_ARRAY(pth_str_list); i++)
@@ -417,6 +426,11 @@ bool Chat::prepare_qfile_for_start()
         m_data_no = ui->numberTextEdit->text();
     }
     m_skin_type = ui->skinTypeComboBox->currentText();
+    m_obj_desc = ui->objDescTextEdit->text();
+    m_dev_id = ui->devIDTextEdit->text();
+    m_dev_desc = ui->devDescTextEdit->text();
+    m_expt_id = ui->exptIDTextEdit->text();
+    m_expt_desc = ui->exptDescTextEdit->text();
 
     QString s_info_str = m_data_no + "_" + m_sample_pos + "---";
     QString dtms_str = diy_curr_date_time_str_ms();
@@ -464,7 +478,7 @@ bool Chat::prepare_qfile_for_start()
     return true;
 }
 
-void Chat::start_send_data_to_device()
+void Chat::start_send_data_to_device(bool single_cmd)
 {
     if(m_file_write_ready)
     {
@@ -478,7 +492,7 @@ void Chat::start_send_data_to_device()
 
     if(m_tx_char && m_tx_char->getCharacteristic().isValid())
     {
-        if(!check_vul_info())
+        if(!check_volu_info())
         {
             return;
         }
@@ -506,7 +520,8 @@ void Chat::start_send_data_to_device()
 
         QByteArray bytes_to_send;
         bool gen_pkt_ok;
-        if (!m_calibrating && ui->sendText->text().length() >0)
+        //if (!m_calibrating && ui->sendText->text().length() >0)
+        if(single_cmd)
         {
             m_single_light_write = true;
             QString send_txt = ui->sendText->text();
@@ -870,7 +885,7 @@ void Chat::on_choosePathButton_clicked()
         m_all_rec_pth_str = m_data_pth_str + "/" + QString(m_all_rec_dir_rel_name);
         m_txt_pth_str = m_data_pth_str  + "/" + QString(m_txt_dir_rel_name);
         m_csv_pth_str = m_data_pth_str  + "/" + QString(m_csv_dir_rel_name);
-        m_local_dbcsv_pth_str = m_data_pth_str + "/" + QString(m_local_dbcsv_dir_rel_name);
+        m_local_db_pth_str = m_data_pth_str + "/" + QString(m_local_db_dir_rel_name);
         m_dir_ready = false;
     }
     ui->storePathDisplay->setText(m_data_pth_str);
@@ -960,7 +975,7 @@ void Chat::on_manualCmdBtn_clicked()
         QMessageBox::critical(nullptr, "!!!", "请输入命令（十六进制字符串，可以包含空格）!");
         return;
     }
-    start_send_data_to_device();
+    start_send_data_to_device(true);
 }
 
 void Chat::set_manual_cmd_btn()

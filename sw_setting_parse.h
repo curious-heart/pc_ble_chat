@@ -6,6 +6,7 @@
 #include <QMap>
 #include <QFile>
 #include <QDebug>
+#include "diy_common_tool.h"
 
 typedef struct _light_info_t
 {
@@ -70,41 +71,6 @@ public:
        qDebug() << "\n";
     }
 }setting_ble_dev_info_t;
-
-typedef class _db_info_t
-{
-public:
-    bool valid;
-    QString srvr_addr;
-    uint16_t srvr_port;
-    QString db_name, login_id, login_pwd;
-    QString dbms_name, dbms_ver;
-
-    _db_info_t()
-    {
-        clear();
-    }
-    ~_db_info_t()
-    {
-        clear();
-    }
-    void clear()
-    {
-        srvr_addr = db_name = login_id = login_pwd = dbms_name = dbms_ver = QString();
-        srvr_port = 0;
-        valid = false;
-    }
-    void log_print()
-    {
-        qDebug() << "db_info srvr_addr:" << srvr_addr << ","
-                 << "db_info srvr_port:" << srvr_port << ","
-                 << "db_info db_name:" << db_name << ","
-                 << "db_info login_id:" << login_id << ","
-                 << "db_info login_pwd:" << login_pwd << ","
-                 << "db_info dbms_name:" << dbms_name << ","
-                 << "db_info dbms_ver:" << dbms_ver << "\n";
-    }
-}setting_db_info_t;
 
 typedef class _oth_settings_t
 {

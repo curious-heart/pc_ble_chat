@@ -305,7 +305,7 @@
            </widget>
           </item>
           <item>
-           <widget class="QLineEdit" name="lineEdit_9"/>
+           <widget class="QLineEdit" name="objDescTextEdit"/>
           </item>
           <item>
            <spacer name="verticalSpacer_2">
@@ -352,10 +352,10 @@
             <item>
              <layout class="QFormLayout" name="formLayout">
               <item row="0" column="1">
-               <widget class="QLineEdit" name="lineEdit_5"/>
+               <widget class="QLineEdit" name="devIDTextEdit"/>
               </item>
               <item row="0" column="0">
-               <widget class="QLabel" name="label">
+               <widget class="QLabel" name="devIDLabel">
                 <property name="text">
                  <string>设备ID</string>
                 </property>
@@ -364,14 +364,14 @@
              </layout>
             </item>
             <item>
-             <widget class="QLabel" name="label_4">
+             <widget class="QLabel" name="devDescLabel">
               <property name="text">
                <string>设备描述</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="lineEdit_7"/>
+             <widget class="QLineEdit" name="devDescTextEdit"/>
             </item>
            </layout>
           </widget>
@@ -403,26 +403,26 @@
             <item>
              <layout class="QFormLayout" name="formLayout_2">
               <item row="0" column="0">
-               <widget class="QLabel" name="label_2">
+               <widget class="QLabel" name="exptIDLabel">
                 <property name="text">
                  <string>实验ID</string>
                 </property>
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QLineEdit" name="lineEdit_6"/>
+               <widget class="QLineEdit" name="exptIDTextEdit"/>
               </item>
              </layout>
             </item>
             <item>
-             <widget class="QLabel" name="label_3">
+             <widget class="QLabel" name="exptDescLabel">
               <property name="text">
-               <string>本次实验描述</string>
+               <string>实验描述</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="lineEdit_8"/>
+             <widget class="QLineEdit" name="exptDescTextEdit"/>
             </item>
            </layout>
           </widget>

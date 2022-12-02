@@ -14,4 +14,30 @@ bool is_full_uuid(QString uuid);
 bool mkpth_if_not_exists(QString &pth_str);
 
 #define DIY_SIZE_OF_ARRAY(arr) (sizeof(arr)/sizeof((arr)[0]))
+
+typedef class _db_info_t
+{
+public:
+    bool valid;
+    QString srvr_addr;
+    uint16_t srvr_port;
+    QString db_name, login_id, login_pwd;
+    QString dbms_name, dbms_ver;
+
+    _db_info_t()
+    {
+        clear();
+    }
+    ~_db_info_t()
+    {
+        clear();
+    }
+    void clear()
+    {
+        srvr_addr = db_name = login_id = login_pwd = dbms_name = dbms_ver = QString();
+        srvr_port = 0;
+        valid = false;
+    }
+    void log_print();
+}setting_db_info_t;
 #endif // DIY_COMMON_TOOL_H
