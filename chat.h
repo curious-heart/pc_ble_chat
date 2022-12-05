@@ -171,11 +171,9 @@ private:
     bool m_all_dev_scan = false;
     bool m_only_rec_valid_data = true;
     QString m_curr_file_bn_str;
-    QString m_data_no, m_sample_pos, m_skin_type, m_obj_desc;
-    QString m_dev_id, m_dev_desc;
-    QString m_expt_id, m_expt_desc;
     light_list_t::Iterator m_curr_light_no; /* used to traverse light_list.*/
     SkinDatabase m_skin_db;
+    SkinDatabase::db_info_intf_t m_db_data;
 
     QTimer m_write_wait_resp_timer;
     QTimer m_write_done_timer;

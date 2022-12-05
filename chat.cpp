@@ -135,6 +135,7 @@ Chat::Chat(QWidget *parent)
     m_txt_pth_str = m_data_pth_str  + "/" + QString(m_txt_dir_rel_name);
     m_csv_pth_str = m_data_pth_str  + "/" + QString(m_csv_dir_rel_name);
     m_local_db_pth_str = m_data_pth_str + "/" + QString(m_local_db_dir_rel_name);
+    m_skin_db.set_local_db_pth_str(m_local_db_pth_str);
 
     m_adapter = localAdapters.isEmpty() ? QBluetoothAddress() :
                            localAdapters.at(currentAdapterIndex).address();
@@ -162,7 +163,9 @@ Chat::Chat(QWidget *parent)
     {
         ui->onlyValidDatacheckBox->setCheckState(Qt::Unchecked);
     }
-    m_data_no = "";// ui->numberTextEdit->toPlainText();
+    m_db_data.obj_id = "";
+    m_db_data.expt_date = QDate::currentDate().toString("yyyy-MM-dd");
+    m_db_data.expt_time = QTime::currentTime().toString("HH-mm-ss");
     ui->currFileradioButton->setChecked(true);
     ui->currFolderradioButton->setChecked(false);
 
@@ -291,6 +294,7 @@ void Chat::connectClicked()
         }
 
         m_curr_light_no = m_work_dev_info->light_list.begin();
+        m_db_data.dev_addr = m_work_dev_info->addr;
 
         connect(m_service->service(), &QLowEnergyService::characteristicWritten,
                 this, &Chat::BleServiceCharacteristicWritten);
@@ -366,7 +370,7 @@ bool Chat::check_volu_info()
     {
         err_str = "编号为空，请确认是否继续！";
     }
-    else if(m_data_no == curr_no)
+    else if(m_db_data.obj_id == curr_no)
     {
         err_str = "编号没有更新，请确认是否继续！";
     }
@@ -417,22 +421,22 @@ bool Chat::prepare_qfile_for_start()
 {
     if(m_calibrating)
     {
-        m_sample_pos = m_calibration_pos;
-        m_data_no = m_calibration_no;
+        m_db_data.pos = m_calibration_pos;
+        m_db_data.obj_id = m_calibration_no;
     }
     else
     {
-        m_sample_pos = ui->posComboBox->currentText();
-        m_data_no = ui->numberTextEdit->text();
+        m_db_data.pos = ui->posComboBox->currentText();
+        m_db_data.obj_id = ui->numberTextEdit->text();
     }
-    m_skin_type = ui->skinTypeComboBox->currentText();
-    m_obj_desc = ui->objDescTextEdit->text();
-    m_dev_id = ui->devIDTextEdit->text();
-    m_dev_desc = ui->devDescTextEdit->text();
-    m_expt_id = ui->exptIDTextEdit->text();
-    m_expt_desc = ui->exptDescTextEdit->text();
+    m_db_data.skin_type = ui->skinTypeComboBox->currentText();
+    m_db_data.obj_desc = ui->objDescTextEdit->text();
+    m_db_data.dev_id = ui->devIDTextEdit->text();
+    m_db_data.dev_desc = ui->devDescTextEdit->text();
+    m_db_data.expt_id = ui->exptIDTextEdit->text();
+    m_db_data.expt_desc = ui->exptDescTextEdit->text();
 
-    QString s_info_str = m_data_no + "_" + m_sample_pos + "---";
+    QString s_info_str = m_db_data.obj_id + "_" + m_db_data.pos + "---";
     QString dtms_str = diy_curr_date_time_str_ms();
     m_curr_file_bn_str =  s_info_str + dtms_str;
     QString all_rec_pf_str = m_all_rec_pth_str + "/"
@@ -475,6 +479,8 @@ bool Chat::prepare_qfile_for_start()
         QMessageBox::critical(nullptr, "!!!", err);
         return false;
     }
+    m_db_data.rec_date = QDate::currentDate().toString("yyyy-MM-dd");
+    m_db_data.rec_date = QTime::currentTime().toString("HH:mm:ss");
     return true;
 }
 
@@ -521,6 +527,7 @@ void Chat::start_send_data_to_device(bool single_cmd)
         QByteArray bytes_to_send;
         bool gen_pkt_ok;
         //if (!m_calibrating && ui->sendText->text().length() >0)
+        m_db_data.lambda_data.clear();
         if(single_cmd)
         {
             m_single_light_write = true;
@@ -615,6 +622,10 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
             m_txt_file.write(utf8_str.toUtf8());
             ui->chat->insertPlainText(utf8_str);
         }
+        SkinDatabase::db_lambda_data_s_t ld;
+        ld.lambda = m_curr_light_no.value()->lambda;
+        ld.data = value.toULongLong(nullptr, 16);
+        m_db_data.lambda_data.append(ld);
         val_p_prf.prepend("***");
         ++m_curr_light_no;
     }
@@ -718,6 +729,7 @@ void Chat::write_data_done_notify()
 void Chat::write_data_done_handle(bool done)
 {
     QString err, title;
+    bool non_empty = true;
     if(done)
     {
         err = "数据采集完成";
@@ -727,10 +739,15 @@ void Chat::write_data_done_handle(bool done)
     {
         if(m_single_light_write)
         {
+            non_empty = false;
             err = QString("超时，未收到数据。结束！");
         }
         else
         {
+            if(m_curr_light_no == m_work_dev_info->light_list.begin())
+            {
+                non_empty = false;
+            }
             err = QString("超时，未收到波长=%1，idx=%2的灯光数据。结束！").\
                     arg(m_curr_light_no.value()->lambda).\
                     arg(m_curr_light_no.value()->idx);
@@ -754,6 +771,10 @@ void Chat::write_data_done_handle(bool done)
         m_txt_file.close();
         m_file_write_ready = false;
         ui->currFileNameLabel->setText(m_curr_file_bn_str);
+    }
+    if(non_empty)
+    {
+        m_skin_db.store_these_info(m_db_data);
     }
 }
 
@@ -930,11 +951,12 @@ void Chat::on_fileVisualButton_clicked()
     QString file_pos;
     if(ui->currFileradioButton->isChecked())
     {
-        file_pos = m_data_pth_str + "/" + m_curr_file_bn_str + m_txt_ext;
+        file_pos = m_data_pth_str + "/" + QString(m_txt_dir_rel_name) + "/"
+                + m_curr_file_bn_str + m_txt_ext;
     }
     else if(ui->currFolderradioButton->isChecked())
     {
-        file_pos = m_data_pth_str;
+        file_pos = m_data_pth_str + "/" + QString(m_txt_dir_rel_name);
     }
     else
     {

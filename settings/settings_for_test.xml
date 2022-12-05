@@ -1,4 +1,40 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--说明
+    <ble_dev_list> 如果最终所有<dev>都不可用，则会使用APP软件内置默认的device信息。
+	<dev>
+	    <dev_type>original_dev</dev_type> 可选。如果不指定，APP软件会请用户设置或自动生成。
+	    <addr>27:A5:D2:1E:67:DD</addr> 必须存在且合法，否则此<dev>会被抛弃。
+	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid> 同<addr>
+	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char> 同<addr>
+	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char> 同<addr>
+	    <light_list> 可以不存在或为空。此时使用默认的light_list。
+		<light> 
+		    <lambda>354</lambda>  波长(nm)。必须存在且合法，否则整个<dev>会被抛弃。
+		    <flash_period>500</flash_period> 一个灯点亮的时长(ms)。可以不存在或非法，此时会使用默认值。
+		    <flash_gap>10</flash_gap> 一个灯熄灭后到下一个灯点亮的时间间隔(ms)。同<flash_period>
+		    <idx>1</idx> 设备内部对灯的编号。参考原始设备，编号从1开始。如果xml中不指定，APP软件会自动赋予前一个编号值+1（可能重复）
+		</light>
+	    </light_list>
+	    等待一个灯的数据的最长时间（ms）。可选。APP软件内部有默认值。如果设置，应该比max(flash_period + flash_gap)*2要大，否则会强制设置为这个值。
+	    <single_light_wait_time>1000</single_light_wait_time> 
+    </dev>
+    </ble_dev_list>
+
+    <db_info> 如果不存在或信息不合法，会使用APP软件内置默认的信息。
+	<srvr_addr>li371359001.vicp.net</srvr_addr> 必须存在，否则<db_info>会被抛弃。
+	<srvr_port>3306</srvr_port> 同<srvr_addr>
+	<dbms_name>MySQL</dbms_name> 可选。
+	<dbms_ver>5.7.26</dbms_ver>可选。
+	<db_name>detector</db_name> 同<srvr_addr>
+	<login_id>admin</login_id> 可选。
+	<login_pwd>admin123</login_pwd> 可选。
+    </db_info>
+
+    <oth_settings> 如果不存在或信息不合法，会使用APP软件内置默认的信息。
+	<use_remote_db>1</use_remote_db> 可选。
+    </oth_settings>
+-->
+
 <cfg_info>
     <ble_dev_list>
 	<dev>

@@ -10,7 +10,7 @@
 
 typedef struct _light_info_t
 {
-    int lambda; /*波长(nm)*/
+    quint32 lambda; /*波长(nm)*/
     int flash_period; /*点亮时长(ms)*/
     int flash_gap; /*熄灭后到下一个灯点亮前的间隔时间(ms)*/
     int idx; /*设备内部对灯的编号。从1开始*/

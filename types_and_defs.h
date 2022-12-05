@@ -38,7 +38,7 @@ extern const int g_def_light_flash_gap;
 
 typedef struct _int_array_num_t
 {
-    const int * d_arr;
+    const quint32 * d_arr;
     int num;
 }int_array_num_t;
 

@@ -2,7 +2,7 @@
 <!--说明
     <ble_dev_list> 如果最终所有<dev>都不可用，则会使用APP软件内置默认的device信息。
 	<dev>
-	    <dev_id>original_dev</dev_id> 可选。如果不指定，APP软件会请用户设置或自动生成。
+	    <dev_type>original_dev</dev_type> 可选。如果不指定，APP软件会请用户设置或自动生成。
 	    <addr>27:A5:D2:1E:67:DD</addr> 必须存在且合法，否则此<dev>会被抛弃。
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid> 同<addr>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char> 同<addr>
@@ -38,7 +38,7 @@
 <cfg_info>
     <ble_dev_list>
 	<dev>
-	    <dev_id>original_dev</dev_id>
+	    <dev_type>original_dev</dev_type>
 	    <addr>27:A5:D2:1E:67:DD</addr>
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
@@ -64,79 +64,51 @@
 		</light>
 		<light>
 		    <lambda>560</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>600</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>645</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>680</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>705</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>800</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>850</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>910</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>930</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>970</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>1000</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>1050</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>1070</lambda>
-		    <flash_period>600</flash_period>
-		    <flash_gap>0</flash_gap>
 		</light>
 		<light>
 		    <lambda>1200</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 	    </light_list>
 	    <single_light_wait_time>1500</single_light_wait_time>
 	</dev>
 	<dev>
-	    <dev_id>colone_1</dev_id>
+	    <dev_type>clone_dev</dev_type>
 	    <addr>1E:A2:CA:1E:67:DD</addr>
 	    <!--
 	    <srv_uuid>0000fff0-0000-1000-8000-00805f9b34fb</srv_uuid>
@@ -149,23 +121,18 @@
 	    <light_list>
 		<light>
 		    <lambda>560</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		    <idx>6</idx>
 		</light>
 		<light>
 		    <lambda>600</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>645</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 	    </light_list>
         </dev>
 	<dev>
+	    <dev_type>clone_dev</dev_type>
 	    <addr>33:BD:CA:1E:67:DD</addr>
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
@@ -181,24 +148,12 @@
 		    <lambda>645</lambda>
 		</light>
 	    </light_list>
-        </dev>
+	</dev>
 	<dev>
-	    <dev_id>colone_2</dev_id>
-	    <addr>33:BD:CA:1E:67:DD</addr>
+	    <addr>43:BD:CA:1E:67:DD</addr>
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
 	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
-	    <light_list>
-		<light>
-		    <lambda>560</lambda>
-		</light>
-		<light>
-		    <lambda>600</lambda>
-		</light>
-		<light>
-		    <lambda>645</lambda>
-		</light>
-	    </light_list>
 	</dev>
     </ble_dev_list>
 

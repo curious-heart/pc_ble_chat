@@ -105,9 +105,9 @@ static bool parse_light_list(QDomElement &e, light_list_t & light_list)
         QDomNode info_e_n= light_e.namedItem(lambda_elem());
         if(!info_e_n.isNull())
         {
-            int lambda_i;
+            quint32 lambda_i;
             bool ok = true;
-            lambda_i = info_e_n.toElement().text().toInt(&ok);
+            lambda_i = info_e_n.toElement().text().toUInt(&ok);
             if(ok)
             {
                 light_info_t * in = new light_info_t;

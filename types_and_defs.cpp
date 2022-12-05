@@ -31,8 +31,8 @@ const bool g_def_use_remote_db = true;
 const char* g_settings_xml_fpn = "./settings/settings.xml";
 
 /*The lambda list needs to be re-initialized into Qt type in cTypeAndDefs_T constructor.*/
-static const int g_ori_lambda_list[] = {354,376,405,450,505,560,600,645,680,705,800,850,910,930,970,1000,1050,1070,1200};
-static const int g_clone_def_lambda_list[] = {354,376,405,450,505,560,600,645,680,705,800,850,910,930,970,1000,1050,1070,1200};
+static const quint32 g_ori_lambda_list[] = {354,376,405,450,505,560,600,645,680,705,800,850,910,930,970,1000,1050,1070,1200};
+static const quint32 g_clone_def_lambda_list[] = {354,376,405,450,505,560,600,645,680,705,800,850,910,930,970,1000,1050,1070,1200};
 /*Begin: TypesAndDefs_T*/
 TypesAndDefs_T::TypesAndDefs_T()
 {
