@@ -165,7 +165,7 @@ Chat::Chat(QWidget *parent)
     }
     m_db_data.obj_id = "";
     m_db_data.expt_date = QDate::currentDate().toString("yyyy-MM-dd");
-    m_db_data.expt_time = QTime::currentTime().toString("HH-mm-ss");
+    m_db_data.expt_time = QTime::currentTime().toString("HH:mm:ss");
     ui->currFileradioButton->setChecked(true);
     ui->currFolderradioButton->setChecked(false);
 
