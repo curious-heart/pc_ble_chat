@@ -46,7 +46,7 @@
         + m_col_data_str + QString(" UNSIGNED BIG INT,")\
         + m_col_date_str + QString(" TEXT,") + m_col_time_str + QString(" TEXT,")\
         + m_col_dev_id_str + QString(" TEXT,") + m_col_expt_id_str + QString(" TEXT,")\
-        + m_col_rec_id_str + QString(" TEXT,")\
+        + m_col_rec_id_str + QString(" INTEGER,")\
         + QString("PRIMARY KEY(") + m_col_rec_id_str + QString(")")+ QString(");"))
 
 #define _CREATE_VIEW_DATUM_CMD_ \
@@ -86,13 +86,20 @@
 
 /*info must be of type db_info_intf_t*/
 #define _INSERT_TBL_DATUM_CMD_(info, i) \
-    (QString("INSERT INTO ") + m_tbl_datum_str + " VALUES "\
+    (QString("INSERT INTO ") + m_tbl_datum_str\
+     + " ("\
+     + m_col_obj_id_str + "," + m_col_pos_str + ","\
+     + m_col_lambda_str + "," + m_col_data_str + ","\
+     + m_col_date_str + "," + m_col_time_str + ","\
+     + m_col_dev_id_str + "," + m_col_expt_id_str\
+     + ") "\
+     + "VALUES "\
      + "(" + "\"" + (info).obj_id + "\"" + "," + "\"" + (info).pos + "\"" + ","\
-     + "\"" + QString::number((info).lambda_data[i].lambda) + "\"" + ","\
-     + "\"" + QString::number((info).lambda_data[i].data) + "\"" + ","\
+     + QString::number((info).lambda_data[i].lambda) + ","\
+     + QString::number((info).lambda_data[i].data) + ","\
      + "\"" + (info).rec_date + "\"" + ","  + "\"" + (info).rec_time + "\"" + ","\
      + "\"" + (info).dev_id + "\"" + "," + "\"" + (info).expt_id + "\""\
-     + ",\"1\"" + ");")
+     + ");")
 
 typedef struct
 {

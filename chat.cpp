@@ -480,7 +480,7 @@ bool Chat::prepare_qfile_for_start()
         return false;
     }
     m_db_data.rec_date = QDate::currentDate().toString("yyyy-MM-dd");
-    m_db_data.rec_date = QTime::currentTime().toString("HH:mm:ss");
+    m_db_data.rec_time = QTime::currentTime().toString("HH:mm:ss");
     return true;
 }
 
@@ -605,6 +605,8 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
 {
     QString str, utf8_str;
     QString val_p_prf = " value:";
+    QByteArray data = QByteArray(&(value.constData()[ORID_DATA_POS_START]),
+                                 ORID_DATA_POS_LEN);
 
     str = QByteHexString(value);
     utf8_str = str + "\r\n";
@@ -624,7 +626,7 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
         }
         SkinDatabase::db_lambda_data_s_t ld;
         ld.lambda = m_curr_light_no.value()->lambda;
-        ld.data = value.toULongLong(nullptr, 16);
+        ld.data = data.toULongLong(nullptr);
         m_db_data.lambda_data.append(ld);
         val_p_prf.prepend("***");
         ++m_curr_light_no;

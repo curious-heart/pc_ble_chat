@@ -306,7 +306,8 @@ void RemoteSelector::serviceScanDone()
 
     DIY_LOG(LOG_LEVEL::LOG_INFO, "-------ssssssss------------");
     DIY_LOG(LOG_LEVEL::LOG_INFO, "Service discovery finished!");
-    for (auto s: qAsConst(m_services)) {
+    for (auto s: qAsConst(m_services))
+    {
         auto serviceInfo = qobject_cast<ServiceInfo *>(s);
         if (!serviceInfo)
             continue;
