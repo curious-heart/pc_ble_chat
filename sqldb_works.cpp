@@ -3,6 +3,19 @@
 #include "sqldb_works.h"
 #include "logger.h"
 
+/*
+ * Begin: Som sqlite defines.
+ * Refer to https://www.sqlite.org/rescode.html#constraint_primarykey
+ * We do not include other header files, and just define those things (e.g. result codes)
+ * we handle here.
+ * This is just for simplicity, and in future we may use those header files...
+*/
+#define SQLITE_CONSTRAINT_PRIMARYKEY 1555
+#define SQLITE_CONSTRAINT_UNIQUE 2067
+/*
+ * End.
+*/
+
 #define m_db_name_str QString("detector")
 #define m_tbl_expts_str QString("experiments")
 #define m_col_expt_id_str QString("expt_id")
@@ -22,24 +35,38 @@
 #define m_col_rec_id_str QString("rec_id")
 #define m_view_datum_str QString("datum_view")
 
+#define _TBL_EXPTS_COLS_ \
+        (m_col_expt_id_str + "," + m_col_desc_str + ","\
+        + m_col_date_str + "," + m_col_time_str)
 #define _CREATE_TBL_EXPTS_CMD_ \
      (QString("CREATE TABLE IF NOT EXISTS ") + m_tbl_expts_str + " ("\
         + m_col_expt_id_str + QString(" TEXT,") + m_col_desc_str + QString(" TEXT,")\
         + m_col_date_str + QString(" TEXT,") + m_col_time_str + QString(" TEXT,")\
         + QString("PRIMARY KEY(") + m_col_expt_id_str + QString(")") + ");")
 
+#define _TBL_OBJECTS_COLS_ \
+        (m_col_obj_id_str + "," + m_col_skin_type_str + "," + m_col_desc_str)
 #define _CREATE_TBL_OBJECTS_CMD_ \
      (QString("CREATE TABLE IF NOT EXISTS ") + m_tbl_objects_str + " ("\
         + m_col_obj_id_str + QString(" TEXT,") + m_col_skin_type_str + QString(" TEXT,")\
         + m_col_desc_str + QString(" TEXT,")\
         + QString("PRIMARY KEY(") + m_col_obj_id_str + QString(")") + QString(");"))
 
+#define _TBL_DEVICES_COLS_ \
+        (m_col_dev_id_str + "," + m_col_dev_addr_str + "," + m_col_desc_str)
 #define _CREATE_TBL_DEVICES_CMD_ \
      (QString("CREATE TABLE IF NOT EXISTS ") + m_tbl_devices_str + " ("\
         + m_col_dev_id_str + QString(" TEXT,") + m_col_dev_addr_str + QString(" TEXT,")\
         + m_col_desc_str + QString(" TEXT,")\
         + QString("PRIMARY KEY(") + m_col_dev_id_str + QString(")")+ QString(");"))
 
+/*No rec_id.*/
+#define _TBL_DATUM_COLS_ \
+        (m_col_obj_id_str + "," + m_col_pos_str + ","\
+        + m_col_lambda_str + ","\
+        + m_col_data_str + ","\
+        + m_col_date_str + "," + m_col_time_str + ","\
+        + m_col_dev_id_str + "," + m_col_expt_id_str)
 #define _CREATE_TBL_DATUM_CMD_ \
      (QString("CREATE TABLE IF NOT EXISTS ") + m_tbl_datum_str + " ("\
         + m_col_obj_id_str + QString(" TEXT,") + m_col_pos_str + QString(" TEXT,")\
@@ -72,18 +99,31 @@
     (QString("INSERT INTO ") + m_tbl_expts_str + " VALUES "\
      + "(" + "\"" + (info).expt_id + "\"" + "," + "\"" + (info).expt_desc +"\"" + ","\
     + "\"" + (info).expt_date + "\"" + "," + "\"" + (info).expt_time +"\"" + ");")
+#define _FORCE_UPD_TBL_EXPT_CLAU_(info)\
+        (m_col_expt_id_str + "=" + "\"" + (info).expt_id + "\"" + ","\
+        + m_col_desc_str + "=" + "\"" + (info).expt_desc + "\"" + ","\
+        + m_col_date_str + "=" + "\"" + (info).expt_date +"\"" + ","\
+        + m_col_time_str + "="  + "\"" + (info).expt_time  + "\"")
 
 /*info must be of type db_info_intf_t*/
 #define _INSERT_TBL_OBJECTS_CMD_(info) \
     (QString("INSERT INTO ") + m_tbl_objects_str + " VALUES "\
      + "(" + "\"" + (info).obj_id + "\"" + "," + "\"" + (info).skin_type + "\"" + ","\
      + "\"" + (info).obj_desc + "\"" + ");")
+#define _FORCE_UPD_TBL_OBJECTS_CLAU_(info)\
+    (m_col_obj_id_str + "=" + "\"" + (info).obj_id  + "\"" + ","\
+    + m_col_skin_type_str + "=" + "\"" + (info).skin_type + "\"" + ","\
+    + m_col_desc_str + "=" + "\"" + (info).obj_desc + "\"")
 
 /*info must be of type db_info_intf_t*/
 #define _INSERT_TBL_DEVICES_CMD_(info) \
     (QString("INSERT INTO ") + m_tbl_devices_str + " VALUES "\
      + "("  + "\"" + (info).dev_id + "\"" + "," + "\"" + (info).dev_addr + "\"" + ","\
      + "\"" + (info).dev_desc + "\"" + ");")
+#define _FORCE_UPD_TBL_DEVICES_CLAU_(info)\
+        (m_col_dev_id_str + "=" + "\"" + (info).dev_id + "\"" + ","\
+        + m_col_dev_addr_str + "=" + "\"" + (info).dev_addr + "\"" + ","\
+        + m_col_desc_str + "=" + "\"" + (info).dev_desc + "\"")
 
 /*info must be of type db_info_intf_t*/
 #define _INSERT_TBL_DATUM_CMD_(info, i) \
@@ -102,10 +142,14 @@
      + "\"" + (info).dev_id + "\"" + "," + "\"" + (info).expt_id + "\""\
      + ");")
 
+#define _SQLITE_INSERT_UPDATE_CLAU_ QString("ON CONFLICT DO UPDATE SET")
+#define _MYSQL_INSERT_UPDATE_CLAU_  QString("ON DUPLICATE KEY UPDATE")
+
 typedef struct
 {
     QString tv_name;
     QString cmd_str;
+    QString force_upd_clau;
 }tv_name_cmd_map_t;
 
 SkinDatabase::SkinDatabase()
@@ -175,11 +219,11 @@ bool SkinDatabase::create_tbls_and_views()
     QString name, cmd;
     tv_name_cmd_map_t create_tv_cmds[] =
     {
-       {m_tbl_expts_str, _CREATE_TBL_EXPTS_CMD_},
-       {m_tbl_objects_str, _CREATE_TBL_OBJECTS_CMD_},
-       {m_tbl_devices_str, _CREATE_TBL_DEVICES_CMD_},
-       {m_tbl_datum_str, _CREATE_TBL_DATUM_CMD_},
-       {m_view_datum_str, _CREATE_VIEW_DATUM_CMD_},
+       {m_tbl_expts_str, _CREATE_TBL_EXPTS_CMD_, ""},
+       {m_tbl_objects_str, _CREATE_TBL_OBJECTS_CMD_, ""},
+       {m_tbl_devices_str, _CREATE_TBL_DEVICES_CMD_, ""},
+       {m_tbl_datum_str, _CREATE_TBL_DATUM_CMD_, ""},
+       {m_view_datum_str, _CREATE_VIEW_DATUM_CMD_, ""},
     };
 
     /*Create TABLE and VIEW*/
@@ -215,10 +259,13 @@ void SkinDatabase::store_these_info(db_info_intf_t &info)
     bool ret;
     tv_name_cmd_map_t insert_tbl_cmds[] =
     {
-       {m_tbl_expts_str, _INSERT_TBL_EXPT_CMD_(m_intf)},
-       {m_tbl_objects_str, _INSERT_TBL_OBJECTS_CMD_(m_intf)},
-       {m_tbl_devices_str, _INSERT_TBL_DEVICES_CMD_(m_intf)},
-       {m_tbl_datum_str, nullptr},
+       {m_tbl_expts_str, _INSERT_TBL_EXPT_CMD_(m_intf),
+                         _FORCE_UPD_TBL_EXPT_CLAU_(m_intf)},
+       {m_tbl_objects_str, _INSERT_TBL_OBJECTS_CMD_(m_intf),
+                           _FORCE_UPD_TBL_OBJECTS_CLAU_(m_intf)},
+       {m_tbl_devices_str, _INSERT_TBL_DEVICES_CMD_(m_intf),
+                           _FORCE_UPD_TBL_DEVICES_CLAU_(m_intf)},
+       {m_tbl_datum_str, "", ""},
     };
 
     int idx = 0, d_idx = 0;
@@ -235,7 +282,8 @@ void SkinDatabase::store_these_info(db_info_intf_t &info)
                 {
                     sql_err = query.lastError();
                     DIY_LOG(LOG_LEVEL::LOG_ERROR,
-                            "Insert table %ls fail! Cmd:\n%ls\nError:type %d, code %ls,%ls",
+                            "Insert table %ls fail, stop!!!\n"
+                            "Cmd:\n%ls\nError:type %d, code %ls,%ls",
                            name.utf16(), cmd.utf16(), (int)sql_err.type(),
                            sql_err.nativeErrorCode().utf16(), sql_err.text().utf16());
                     return;
@@ -250,8 +298,25 @@ void SkinDatabase::store_these_info(db_info_intf_t &info)
         if(!ret)
         {
             sql_err = query.lastError();
+            quint32 err_code = sql_err.nativeErrorCode().toUInt();
+            if(err_code == SQLITE_CONSTRAINT_PRIMARYKEY
+                    || err_code == SQLITE_CONSTRAINT_UNIQUE)
+            {
+                DIY_LOG(LOG_LEVEL::LOG_INFO, "inser duplicate, now update");
+                /*update*/
+                cmd.remove(";");
+                cmd += " " + _SQLITE_INSERT_UPDATE_CLAU_ + " "
+                        + insert_tbl_cmds[idx].force_upd_clau + ";";
+                ret = query.exec(cmd);
+                if(ret)
+                {
+                    ++idx;
+                    continue;
+                }
+            }
             DIY_LOG(LOG_LEVEL::LOG_ERROR,
-                    "Insert table %ls fail! Cmd:\n%ls\nError:type %d, code %ls,%ls",
+                    "Insert table %ls fail, stop!!!\n"
+                    "Cmd:\n%ls\nError:type %d, code %ls,%ls",
                    name.utf16(), cmd.utf16(), (int)sql_err.type(),
                    sql_err.nativeErrorCode().utf16(), sql_err.text().utf16());
             return;
