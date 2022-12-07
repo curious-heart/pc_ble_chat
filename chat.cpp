@@ -169,9 +169,13 @@ Chat::Chat(QWidget *parent)
     {
         ui->onlyValidDatacheckBox->setCheckState(Qt::Unchecked);
     }
-    m_db_data.obj_id = "";
+    //m_db_data.obj_id = "";
+    m_db_data.obj_id = ui->numberTextEdit->text();
     m_db_data.expt_date = QDate::currentDate().toString("yyyy-MM-dd");
     m_db_data.expt_time = QTime::currentTime().toString("HH:mm:ss");
+    m_db_data.expt_changed = false;
+    m_db_data.obj_changed = false;
+    m_db_data.dev_changed = false;
     ui->currFileradioButton->setChecked(true);
     ui->currFolderradioButton->setChecked(false);
 
@@ -426,22 +430,54 @@ bool Chat::check_and_mkpth()
 
 bool Chat::prepare_qfile_for_start()
 {
+    QString now_pos, now_obj_id;
     if(m_calibrating)
     {
-        m_db_data.pos = m_calibration_pos;
-        m_db_data.obj_id = m_calibration_no;
+        now_pos = m_calibration_pos;
+        now_obj_id = m_calibration_no;
     }
     else
     {
-        m_db_data.pos = ui->posComboBox->currentText();
-        m_db_data.obj_id = ui->numberTextEdit->text();
+        now_pos = ui->posComboBox->currentText();
+        now_obj_id = ui->numberTextEdit->text();
     }
-    m_db_data.skin_type = ui->skinTypeComboBox->currentText();
-    m_db_data.obj_desc = ui->objDescTextEdit->text();
-    m_db_data.dev_id = ui->devIDTextEdit->text();
-    m_db_data.dev_desc = ui->devDescTextEdit->text();
-    m_db_data.expt_id = ui->exptIDTextEdit->text();
-    m_db_data.expt_desc = ui->exptDescTextEdit->text();
+    if((now_obj_id != m_db_data.obj_id)
+        || (ui->skinTypeComboBox->currentText()) != (m_db_data.skin_type)
+        || (ui->objDescTextEdit->text()) != (m_db_data.obj_desc))
+    {
+        m_db_data.obj_changed = true;
+        m_db_data.obj_id = now_obj_id;
+        m_db_data.skin_type = ui->skinTypeComboBox->currentText();
+        m_db_data.obj_desc = ui->objDescTextEdit->text();
+    }
+    else
+    {
+        m_db_data.obj_changed = false;
+    }
+    m_db_data.pos = now_pos;
+
+    if((ui->devIDTextEdit->text() != m_db_data.dev_id)
+       || (ui->devDescTextEdit->text() != m_db_data.dev_desc))
+    {
+        m_db_data.dev_changed = true;
+        m_db_data.dev_id = ui->devIDTextEdit->text();
+        m_db_data.dev_desc = ui->devDescTextEdit->text();
+    }
+    else
+    {
+        m_db_data.dev_changed = false;
+    }
+    if((ui->exptIDTextEdit->text() != m_db_data.expt_id)
+        || (ui->exptDescTextEdit->text() != m_db_data.expt_desc))
+    {
+        m_db_data.expt_changed = true;
+        m_db_data.expt_id = ui->exptIDTextEdit->text();
+        m_db_data.expt_desc = ui->exptDescTextEdit->text();
+    }
+    else
+    {
+        m_db_data.expt_changed = false;
+    }
 
     QString s_info_str = m_db_data.obj_id + "_" + m_db_data.pos + "---";
     QString dtms_str = diy_curr_date_time_str_ms();
@@ -1029,4 +1065,3 @@ void Chat::on_sendText_textEdited(const QString &/*arg1*/)
         set_manual_cmd_btn();
     }
 }
-

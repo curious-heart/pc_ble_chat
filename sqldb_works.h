@@ -46,6 +46,9 @@ public:
         QList<db_lambda_data_s_t> lambda_data;
         QString rec_date;
         QString rec_time;
+        bool expt_changed;
+        bool obj_changed;
+        bool dev_changed;
     }db_info_intf_t;
 
 private:

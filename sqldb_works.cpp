@@ -150,6 +150,7 @@ typedef struct
     QString tv_name;
     QString cmd_str;
     QString force_upd_clau;
+    bool changed;
 }tv_name_cmd_map_t;
 
 SkinDatabase::SkinDatabase()
@@ -219,11 +220,11 @@ bool SkinDatabase::create_tbls_and_views()
     QString name, cmd;
     tv_name_cmd_map_t create_tv_cmds[] =
     {
-       {m_tbl_expts_str, _CREATE_TBL_EXPTS_CMD_, ""},
-       {m_tbl_objects_str, _CREATE_TBL_OBJECTS_CMD_, ""},
-       {m_tbl_devices_str, _CREATE_TBL_DEVICES_CMD_, ""},
-       {m_tbl_datum_str, _CREATE_TBL_DATUM_CMD_, ""},
-       {m_view_datum_str, _CREATE_VIEW_DATUM_CMD_, ""},
+       {m_tbl_expts_str, _CREATE_TBL_EXPTS_CMD_, "", true},
+       {m_tbl_objects_str, _CREATE_TBL_OBJECTS_CMD_, "", true},
+       {m_tbl_devices_str, _CREATE_TBL_DEVICES_CMD_, "", true},
+       {m_tbl_datum_str, _CREATE_TBL_DATUM_CMD_, "", true},
+       {m_view_datum_str, _CREATE_VIEW_DATUM_CMD_, "", true},
     };
 
     /*Create TABLE and VIEW*/
@@ -259,13 +260,16 @@ void SkinDatabase::store_these_info(db_info_intf_t &info)
     bool ret;
     tv_name_cmd_map_t insert_tbl_cmds[] =
     {
-       {m_tbl_expts_str, _INSERT_TBL_EXPT_CMD_(m_intf),
-                         _FORCE_UPD_TBL_EXPT_CLAU_(m_intf)},
-       {m_tbl_objects_str, _INSERT_TBL_OBJECTS_CMD_(m_intf),
-                           _FORCE_UPD_TBL_OBJECTS_CLAU_(m_intf)},
-       {m_tbl_devices_str, _INSERT_TBL_DEVICES_CMD_(m_intf),
-                           _FORCE_UPD_TBL_DEVICES_CLAU_(m_intf)},
-       {m_tbl_datum_str, "", ""},
+       {m_tbl_expts_str,
+            _INSERT_TBL_EXPT_CMD_(m_intf), _FORCE_UPD_TBL_EXPT_CLAU_(m_intf),
+            m_intf.expt_changed},
+       {m_tbl_objects_str,
+            _INSERT_TBL_OBJECTS_CMD_(m_intf), _FORCE_UPD_TBL_OBJECTS_CLAU_(m_intf),
+            m_intf.obj_changed},
+       {m_tbl_devices_str,
+            _INSERT_TBL_DEVICES_CMD_(m_intf), _FORCE_UPD_TBL_DEVICES_CLAU_(m_intf),
+            m_intf.dev_changed},
+       {m_tbl_datum_str, "", "", true},
     };
 
     int idx = 0, d_idx = 0;
@@ -293,33 +297,36 @@ void SkinDatabase::store_these_info(db_info_intf_t &info)
             ++idx;
             continue;
         }
-        cmd = insert_tbl_cmds[idx].cmd_str;
-        ret = query.exec(cmd);
-        if(!ret)
+        if(insert_tbl_cmds[idx].changed)
         {
-            sql_err = query.lastError();
-            quint32 err_code = sql_err.nativeErrorCode().toUInt();
-            if(err_code == SQLITE_CONSTRAINT_PRIMARYKEY
-                    || err_code == SQLITE_CONSTRAINT_UNIQUE)
+            cmd = insert_tbl_cmds[idx].cmd_str;
+            ret = query.exec(cmd);
+            if(!ret)
             {
-                DIY_LOG(LOG_LEVEL::LOG_INFO, "inser duplicate, now update");
-                /*update*/
-                cmd.remove(";");
-                cmd += " " + _SQLITE_INSERT_UPDATE_CLAU_ + " "
-                        + insert_tbl_cmds[idx].force_upd_clau + ";";
-                ret = query.exec(cmd);
-                if(ret)
+                sql_err = query.lastError();
+                quint32 err_code = sql_err.nativeErrorCode().toUInt();
+                if(err_code == SQLITE_CONSTRAINT_PRIMARYKEY
+                        || err_code == SQLITE_CONSTRAINT_UNIQUE)
                 {
-                    ++idx;
-                    continue;
+                    DIY_LOG(LOG_LEVEL::LOG_INFO, "inser duplicate, now update");
+                    /*update*/
+                    cmd.remove(";");
+                    cmd += " " + _SQLITE_INSERT_UPDATE_CLAU_ + " "
+                            + insert_tbl_cmds[idx].force_upd_clau + ";";
+                    ret = query.exec(cmd);
+                    if(ret)
+                    {
+                        ++idx;
+                        continue;
+                    }
                 }
+                DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                        "Insert table %ls fail, stop!!!\n"
+                        "Cmd:\n%ls\nError:type %d, code %ls,%ls",
+                       name.utf16(), cmd.utf16(), (int)sql_err.type(),
+                       sql_err.nativeErrorCode().utf16(), sql_err.text().utf16());
+                return;
             }
-            DIY_LOG(LOG_LEVEL::LOG_ERROR,
-                    "Insert table %ls fail, stop!!!\n"
-                    "Cmd:\n%ls\nError:type %d, code %ls,%ls",
-                   name.utf16(), cmd.utf16(), (int)sql_err.type(),
-                   sql_err.nativeErrorCode().utf16(), sql_err.text().utf16());
-            return;
         }
         ++idx;
     }
