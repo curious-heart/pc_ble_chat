@@ -43,7 +43,7 @@ win32-msvc*: {
     QMAKE_CXXFLAGS *= /utf-8
 }
 #QMAKE_CXXFLAGS += -P
-VERSION = 3.0
+VERSION = 4.0
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 DEFINES += QT_MJ_V_STR=\\\"$$QT_MAJOR_VERSION\\\"
 
