@@ -1,15 +1,22 @@
-#include <QRegExp>
-#include <QRegExpValidator>
+#include <QRegularExpression>
+#include <QRegularExpressionValidator>
+//#include <QRegExpValidator>
 #include <QDir>
 #include "diy_common_tool.h"
 #include "logger.h"
 
-QString QByteHexString(const QByteArray &qba)
+QString QByteHexString(const QByteArray &qba, const QString sep)
 {
     QString str = "";
-    for(int j =0; j < qba.size(); j++)
+    for(int j = 0; j < qba.size(); j++)
     {
-        str += QString("%1 ").arg((unsigned char)qba[j], 2, 16, QLatin1Char('0'));
+        str += QString("%1").arg((unsigned char)qba[j], 2, 16, QLatin1Char('0'));
+        str += sep;
+    }
+    if(str.size() > 0 && sep.size() > 0)
+    {
+        int last_p = str.size() - sep.size();
+        str.remove(last_p, sep.size());
     }
     return str;
 }
@@ -24,8 +31,8 @@ QString diy_curr_date_time_str_ms()
 
 bool is_mac_address(QString mac)
 {
-    QRegExp rx("^([A-Fa-f0-9]{2}[-,:]){5}[A-Fa-f0-9]{2}$");
-    QRegExpValidator v(rx, nullptr);
+    QRegularExpression rx("^([A-Fa-f0-9]{2}[-,:]){5}[A-Fa-f0-9]{2}$");
+    QRegularExpressionValidator v(rx, nullptr);
     int pos = 0;
     if(v.validate(mac, pos) == QValidator::Acceptable)
     {
@@ -39,8 +46,8 @@ bool is_mac_address(QString mac)
 
 bool is_full_uuid(QString uuid)
 {
-    QRegExp rx("^[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}$");
-    QRegExpValidator v(rx, nullptr);
+    QRegularExpression rx("^[A-Fa-f0-9]{8}(-[A-Fa-f0-9]{4}){3}-[A-Fa-f0-9]{12}$");
+    QRegularExpressionValidator v(rx, nullptr);
     int pos =0;
     if(v.validate(uuid, pos))
     {

@@ -77,9 +77,10 @@ int main(int argc, char *argv[])
     Chat d;
     QObject::connect(&d, &Chat::accepted, &app, &QApplication::quit);
 
-    QString app_ver_str(APP_VERSION);
+    QString app_ver_str = QString(APP_VERSION)
+                         + QString(" Qt") + QString(QT_MJ_V_STR);
     QString app_name = app.applicationName();
-    d.setWindowTitle(app_name + "_" + app_ver_str);
+    d.setWindowTitle(app_name + " " + app_ver_str);
 
 #ifdef Q_OS_ANDROID
     d.showMaximized();

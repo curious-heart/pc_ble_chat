@@ -3,6 +3,9 @@ TEMPLATE = app
 TARGET = skin_data_collector
 
 QT = core bluetooth widgets sql xml
+greaterThan(QT_MAJOR_VERSION, 5){
+    QT += core5compat
+}
 requires(qtConfig(listwidget))
 android: QT += androidextras
 
@@ -42,6 +45,7 @@ win32-msvc*: {
 #QMAKE_CXXFLAGS += -P
 VERSION = 3.0
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
+DEFINES += QT_MJ_V_STR=\\\"$$QT_MAJOR_VERSION\\\"
 
 target.path = $$[QT_INSTALL_EXAMPLES]/bluetooth/btchat
 INSTALLS += target

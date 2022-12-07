@@ -1,4 +1,5 @@
 #include <QSqlQuery>
+#include <QSqlError>
 #include "sqldb_works.h"
 #include "logger.h"
 
@@ -209,6 +210,7 @@ void SkinDatabase::store_these_info(db_info_intf_t &info)
     }
 
     QSqlQuery query(m_local_db);
+    QSqlError sql_err;
     QString name, cmd;
     bool ret;
     tv_name_cmd_map_t insert_tbl_cmds[] =
@@ -231,9 +233,12 @@ void SkinDatabase::store_these_info(db_info_intf_t &info)
                 ret = query.exec(cmd);
                 if(!ret)
                 {
-                   DIY_LOG(LOG_LEVEL::LOG_ERROR, "Insert table %ls fail! Cmd:\n%ls",
-                           name.utf16(), cmd.utf16());
-                   return;
+                    sql_err = query.lastError();
+                    DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                            "Insert table %ls fail! Cmd:\n%ls\nError:type %d, code %ls,%ls",
+                           name.utf16(), cmd.utf16(), (int)sql_err.type(),
+                           sql_err.nativeErrorCode().utf16(), sql_err.text().utf16());
+                    return;
                 }
                 ++d_idx;
             }
@@ -244,9 +249,12 @@ void SkinDatabase::store_these_info(db_info_intf_t &info)
         ret = query.exec(cmd);
         if(!ret)
         {
-           DIY_LOG(LOG_LEVEL::LOG_ERROR, "Insert table %ls fail! Cmd:\n%ls",
-                   name.utf16(), cmd.utf16());
-           return;
+            sql_err = query.lastError();
+            DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                    "Insert table %ls fail! Cmd:\n%ls\nError:type %d, code %ls,%ls",
+                   name.utf16(), cmd.utf16(), (int)sql_err.type(),
+                   sql_err.nativeErrorCode().utf16(), sql_err.text().utf16());
+            return;
         }
         ++idx;
     }

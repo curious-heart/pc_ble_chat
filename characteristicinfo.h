@@ -61,7 +61,9 @@ class CharacteristicInfo: public QObject
     Q_PROPERTY(QString characteristicName READ getName NOTIFY characteristicChanged)
     Q_PROPERTY(QString characteristicUuid READ getUuid NOTIFY characteristicChanged)
     Q_PROPERTY(QString characteristicValue READ getValue NOTIFY characteristicChanged)
+#if (QT_VERSION <= QT_VERSION_CHECK(5, 15, 2))
     Q_PROPERTY(QString characteristicHandle READ getHandle NOTIFY characteristicChanged)
+#endif
     Q_PROPERTY(QString characteristicPermission READ getPermission NOTIFY characteristicChanged)
 
 public:
@@ -71,7 +73,9 @@ public:
     QString getName() const;
     QString getUuid() const;
     QString getValue() const;
+#if (QT_VERSION <= QT_VERSION_CHECK(5, 15, 2))
     QString getHandle() const;
+#endif
     QString getPermission() const;
     QString getDescs() const;
     QString getAllInfoStr() const;

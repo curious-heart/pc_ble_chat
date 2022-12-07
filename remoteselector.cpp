@@ -57,6 +57,16 @@
 
 QT_USE_NAMESPACE
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+#define BLE_SRV_ST_DISC_REQD DiscoveryRequired
+#define BLE_SRV_ST_DISC_ING DiscoveringServices
+#define BLE_SRV_ST_DISC_ED ServiceDiscovered
+#else
+#define BLE_SRV_ST_DISC_REQD RemoteService
+#define BLE_SRV_ST_DISC_ING RemoteServiceDiscovering
+#define BLE_SRV_ST_DISC_ED RemoteServiceDiscovered
+#endif
+
 RemoteSelector::RemoteSelector(const QBluetoothAddress &/*localAdapter*/,
                            const QMap<QString, setting_ble_dev_info_t*> & cfg_dev_list,
                            QWidget *parent)
@@ -88,7 +98,11 @@ RemoteSelector::RemoteSelector(const QBluetoothAddress &/*localAdapter*/,
             this,
             &RemoteSelector::dev_discoveryFinished);
     connect(m_dev_discoveryAgent,
+        #if (QT_VERSION < QT_VERSION_CHECK(6,2,0))
             QOverload<QBluetoothDeviceDiscoveryAgent::Error>::of(&QBluetoothDeviceDiscoveryAgent::error),
+        #else
+            &QBluetoothDeviceDiscoveryAgent::errorOccurred,
+        #endif
             this,
             &RemoteSelector::dev_discoveryErr);
 }
@@ -243,7 +257,12 @@ void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
         }
         connect(controller, &QLowEnergyController::connected,
                 this, &RemoteSelector::deviceConnected);
-        connect(controller, QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error),
+        connect(controller,
+        #if (QT_VERSION < QT_VERSION_CHECK(6,2,0))
+                QOverload<QLowEnergyController::Error>::of(&QLowEnergyController::error),
+        #else
+                &QLowEnergyController::errorOccurred,
+        #endif
                 this, &RemoteSelector::ControllerErrorReceived);
         connect(controller, &QLowEnergyController::disconnected,
                 this, &RemoteSelector::deviceDisconnected);
@@ -409,12 +428,13 @@ void RemoteSelector::serviceDetailsDiscovered(QLowEnergyService::ServiceState ne
     DIY_LOG(LOG_LEVEL::LOG_INFO,
             "Service Details discovered, new state: %ls",
             ServiceInfo::getStateStr(newState).utf16());
-    if (newState != QLowEnergyService::ServiceDiscovered) {
+    if (newState != QLowEnergyService::BLE_SRV_ST_DISC_ED) {
         // do not hang in "Scanning for characteristics" mode forever
         // in case the service discovery failed
         // We have to queue the signal up to give UI time to even enter
         // the above mode
-        if (newState != QLowEnergyService::DiscoveringServices) {
+        if (newState != QLowEnergyService::BLE_SRV_ST_DISC_ING)
+        {
             QMetaObject::invokeMethod(this, "characteristicsUpdated",
                                       Qt::QueuedConnection);
         }
@@ -456,7 +476,7 @@ void RemoteSelector::on_ScanServiceBtn_clicked()
 {
     if(m_service)
     {
-        if(m_service->service()->state() == QLowEnergyService::DiscoveryRequired)
+        if(m_service->service()->state() == QLowEnergyService::BLE_SRV_ST_DISC_REQD)
         {
             DIY_LOG(LOG_LEVEL::LOG_INFO,
                     "Service Discovery Required, now begin to discovery details...");

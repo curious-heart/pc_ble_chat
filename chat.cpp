@@ -70,6 +70,12 @@
 static const QLatin1String reverseUuid("c8e96402-0102-cf9c-274b-701a950fe1e8");
 #endif
 
+#if (QT_VERSION < QT_VERSION_CHECK(6,0,0))
+#define BLE_CLIENT_CHAR_CFG (QBluetoothUuid::ClientCharacteristicConfiguration)
+#else
+#define BLE_CLIENT_CHAR_CFG (QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration)
+#endif
+
 Chat::Chat(QWidget *parent)
     : QDialog(parent), ui(new Ui_Chat)
 {
@@ -280,14 +286,11 @@ void Chat::connectClicked()
         if(!m_service || !m_rx_char || !m_tx_char || !m_work_dev_info)
         {
             QString err;
-            err = QString("Device service info error:\n"
-                          "m_service:0x%1\n"
-                          "m_rx_char:0x%2\n"
-                          "m_tx_char:0x%3\n"
-                          "m_work_dev_info:0x%4").arg(QString((quint64)m_service, 16),
-                                                   QString((quint64)m_rx_char,16),
-                                                   QString((quint64)m_tx_char,16),
-                                                   QString((quint64)m_work_dev_info ,16));
+            err = QString("Device service info error:\n")
+                + QString("m_service:0x\n") + QString::number((quint64)m_service,16)
+                + QString("m_rx_char:0x\n") + QString::number((quint64)m_rx_char,16)
+                + QString("m_tx_char:0x\n") + QString::number((quint64)m_tx_char,16)
+                + QString("m_work_dev_info:0x\n") + QString::number((quint64)m_work_dev_info,16);
             QMessageBox::critical(nullptr, "!!!", err);
             DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
             return;
@@ -304,13 +307,17 @@ void Chat::connectClicked()
                 this, &Chat::BleServiceCharacteristicChanged);
 
          connect(m_service->service(),
+        #if (QT_VERSION < QT_VERSION_CHECK(6,2,0))
                  QOverload<QLowEnergyService::ServiceError>::of(&QLowEnergyService::error),
+        #else
+                 &QLowEnergyService::errorOccurred,
+        #endif
                  this,
                  &Chat::BleServiceError);
 
         const QLowEnergyDescriptor &rx_descp
                 //= m_rx_char->getCharacteristic().descriptors()[0];
-                = m_rx_char->getCharacteristic().descriptor(QBluetoothUuid::ClientCharacteristicConfiguration);
+                = m_rx_char->getCharacteristic().descriptor(BLE_CLIENT_CHAR_CFG);
         m_service->service()->writeDescriptor(rx_descp, QByteArray::fromHex("0100"));
         ui->connectButton->setEnabled(false);
         ui->disconnButton->setEnabled(true);
@@ -605,8 +612,9 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
 {
     QString str, utf8_str;
     QString val_p_prf = " value:";
-    QByteArray data = QByteArray(&(value.constData()[ORID_DATA_POS_START]),
-                                 ORID_DATA_POS_LEN);
+    QByteArray data
+            = QByteHexString(QByteArray(&(value.constData()[ORID_DATA_POS_START]),
+                                 ORID_DATA_POS_LEN), "").toUtf8();
 
     str = QByteHexString(value);
     utf8_str = str + "\r\n";
@@ -626,7 +634,7 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
         }
         SkinDatabase::db_lambda_data_s_t ld;
         ld.lambda = m_curr_light_no.value()->lambda;
-        ld.data = data.toULongLong(nullptr);
+        ld.data = data.toULongLong(nullptr, 16);
         m_db_data.lambda_data.append(ld);
         val_p_prf.prepend("***");
         ++m_curr_light_no;
