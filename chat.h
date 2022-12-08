@@ -134,6 +134,7 @@ private:
     int adapterFromUserSelection() const;
     int currentAdapterIndex = 0;
     Ui_Chat *ui;
+    bool m_first_check = true;
 
     QList<QBluetoothHostInfo> localAdapters;
 

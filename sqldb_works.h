@@ -62,7 +62,7 @@ public:
 
     void set_remote_db_info(setting_db_info_t * db_info);
     void set_local_db_pth_str(QString str);
-    void store_these_info(db_info_intf_t &info);
+    bool store_these_info(db_info_intf_t &info);
 };
 
 #endif // SQLDB_WORKS_H

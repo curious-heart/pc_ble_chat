@@ -169,10 +169,17 @@ Chat::Chat(QWidget *parent)
     {
         ui->onlyValidDatacheckBox->setCheckState(Qt::Unchecked);
     }
-    //m_db_data.obj_id = "";
-    m_db_data.obj_id = ui->numberTextEdit->text();
+    m_db_data.obj_id = "";
+    m_db_data.skin_type = "";
+    m_db_data.pos = "";
+    m_db_data.obj_desc = "";
+    m_db_data.expt_id = "";
     m_db_data.expt_date = QDate::currentDate().toString("yyyy-MM-dd");
     m_db_data.expt_time = QTime::currentTime().toString("HH:mm:ss");
+    m_db_data.expt_desc = "";
+    m_db_data.dev_id = "";
+    m_db_data.dev_addr = "";
+    m_db_data.dev_desc = "";
     m_db_data.expt_changed = false;
     m_db_data.obj_changed = false;
     m_db_data.dev_changed = false;
@@ -441,7 +448,7 @@ bool Chat::prepare_qfile_for_start()
         now_pos = ui->posComboBox->currentText();
         now_obj_id = ui->numberTextEdit->text();
     }
-    if((now_obj_id != m_db_data.obj_id)
+    if(m_first_check || (now_obj_id != m_db_data.obj_id)
         || (ui->skinTypeComboBox->currentText()) != (m_db_data.skin_type)
         || (ui->objDescTextEdit->text()) != (m_db_data.obj_desc))
     {
@@ -456,7 +463,7 @@ bool Chat::prepare_qfile_for_start()
     }
     m_db_data.pos = now_pos;
 
-    if((ui->devIDTextEdit->text() != m_db_data.dev_id)
+    if(m_first_check || (ui->devIDTextEdit->text() != m_db_data.dev_id)
        || (ui->devDescTextEdit->text() != m_db_data.dev_desc))
     {
         m_db_data.dev_changed = true;
@@ -467,7 +474,7 @@ bool Chat::prepare_qfile_for_start()
     {
         m_db_data.dev_changed = false;
     }
-    if((ui->exptIDTextEdit->text() != m_db_data.expt_id)
+    if(m_first_check || (ui->exptIDTextEdit->text() != m_db_data.expt_id)
         || (ui->exptDescTextEdit->text() != m_db_data.expt_desc))
     {
         m_db_data.expt_changed = true;
@@ -820,7 +827,10 @@ void Chat::write_data_done_handle(bool done)
     }
     if(non_empty)
     {
-        m_skin_db.store_these_info(m_db_data);
+        if(m_skin_db.store_these_info(m_db_data))
+        {
+            m_first_check = false;
+        }
     }
 }
 

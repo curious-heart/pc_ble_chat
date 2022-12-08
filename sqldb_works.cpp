@@ -246,12 +246,12 @@ bool SkinDatabase::create_tbls_and_views()
     return ret;
 }
 
-void SkinDatabase::store_these_info(db_info_intf_t &info)
+bool SkinDatabase::store_these_info(db_info_intf_t &info)
 {
     m_intf = info;
     if(!prepare_local_db())
     {
-        return;
+        return false;
     }
 
     QSqlQuery query(m_local_db);
@@ -290,7 +290,7 @@ void SkinDatabase::store_these_info(db_info_intf_t &info)
                             "Cmd:\n%ls\nError:type %d, code %ls,%ls",
                            name.utf16(), cmd.utf16(), (int)sql_err.type(),
                            sql_err.nativeErrorCode().utf16(), sql_err.text().utf16());
-                    return;
+                    return false;
                 }
                 ++d_idx;
             }
@@ -325,9 +325,10 @@ void SkinDatabase::store_these_info(db_info_intf_t &info)
                         "Cmd:\n%ls\nError:type %d, code %ls,%ls",
                        name.utf16(), cmd.utf16(), (int)sql_err.type(),
                        sql_err.nativeErrorCode().utf16(), sql_err.text().utf16());
-                return;
+                return false;
             }
         }
         ++idx;
     }
+    return true;
 }
