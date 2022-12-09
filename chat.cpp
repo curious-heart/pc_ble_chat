@@ -141,7 +141,7 @@ Chat::Chat(QWidget *parent)
     m_txt_pth_str = m_data_pth_str  + "/" + QString(m_txt_dir_rel_name);
     m_csv_pth_str = m_data_pth_str  + "/" + QString(m_csv_dir_rel_name);
     m_local_db_pth_str = m_data_pth_str + "/" + QString(m_local_db_dir_rel_name);
-    m_skin_db.set_local_db_pth_str(m_local_db_pth_str);
+    m_skin_db.set_local_store_pth_str(m_local_db_pth_str, m_data_pth_str);
 
     m_adapter = localAdapters.isEmpty() ? QBluetoothAddress() :
                            localAdapters.at(currentAdapterIndex).address();
@@ -807,8 +807,6 @@ void Chat::write_data_done_handle(bool done)
         }
         title = "!!!";
     }
-    DIY_LOG(LOG_LEVEL::LOG_INFO, "%ls", err.utf16());
-    QMessageBox::information(nullptr, title, err);
     ui->connectButton->setEnabled(false);
     ui->disconnButton->setEnabled(true);
     ui->sendButton->setEnabled(true);
@@ -832,6 +830,8 @@ void Chat::write_data_done_handle(bool done)
             m_first_check = false;
         }
     }
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "%ls", err.utf16());
+    QMessageBox::information(nullptr, title, err);
 }
 
 void Chat::on_chat_textChanged()

@@ -77,10 +77,13 @@
         + m_col_rec_id_str + QString(" INTEGER,")\
         + QString("PRIMARY KEY(") + m_col_rec_id_str + QString(")")+ QString(");"))
 
+#define _VIEW_DATUM_COLS_ \
+        (m_col_obj_id_str + "," + m_col_skin_type_str + "," + m_col_pos_str + ","\
+        + m_col_lambda_str+ "," + m_col_data_str + "," + m_col_date_str + ","\
+        + m_col_time_str + "," + m_col_dev_id_str + "," + m_col_expt_id_str)
 #define _CREATE_VIEW_DATUM_CMD_ \
     (QString("CREATE VIEW IF NOT EXISTS ") + m_view_datum_str + " AS"\
         + " SELECT "\
-        + m_tbl_datum_str + "." + m_col_dev_id_str + ","\
         + m_tbl_datum_str + "." + m_col_obj_id_str + ","\
         + m_tbl_objects_str + "." + m_col_skin_type_str + ","\
         + m_tbl_datum_str + "." + m_col_pos_str + ","\
@@ -88,6 +91,7 @@
         + m_tbl_datum_str + "." + m_col_data_str + ","\
         + m_tbl_datum_str + "." + m_col_date_str + ","\
         + m_tbl_datum_str + "." + m_col_time_str + ","\
+        + m_tbl_datum_str + "." + m_col_dev_id_str + ","\
         + m_tbl_datum_str + "." + m_col_expt_id_str\
         + " FROM " + m_tbl_datum_str\
         + " LEFT JOIN " + m_tbl_objects_str\
@@ -142,6 +146,14 @@
      + "\"" + (info).dev_id + "\"" + "," + "\"" + (info).expt_id + "\""\
      + ");")
 
+/*This macro is used for writing local csv file. info must be of type db_info_intf_t*/
+#define _INSERT_VIEW_DATUM_(info, i) \
+     ((info).obj_id+ "," +  (info).skin_type + "," + (info).pos+ ","\
+     + QString::number((info).lambda_data[i].lambda) + ","\
+     + QString::number((info).lambda_data[i].data) + ","\
+    + (info).rec_date + "," + (info).rec_time + ","\
+    + (info).dev_id + ","+ (info).expt_id)
+
 #define _SQLITE_INSERT_UPDATE_CLAU_ QString("ON CONFLICT DO UPDATE SET")
 #define _MYSQL_INSERT_UPDATE_CLAU_  QString("ON DUPLICATE KEY UPDATE")
 
@@ -177,24 +189,66 @@ SkinDatabase::~SkinDatabase()
     {
         m_local_db.close();
     }
+    if(m_local_csv_ready)
+    {
+        m_local_csv_f.close();
+    }
 }
 
 void SkinDatabase::set_remote_db_info(setting_db_info_t * db_info)
 {
     m_remote_db_info = db_info;
 }
-void SkinDatabase::set_local_db_pth_str(QString str)
+void SkinDatabase::set_local_store_pth_str(QString db, QString csv)
 {
-    m_local_db_pth_str = str;
+    m_local_db_pth_str = db;
+    m_local_csv_pth_str = csv;
 }
+bool SkinDatabase::prepare_local_csv()
+{
+    m_local_csv_name_str = m_db_name_str + ".csv";
+    QString fpn = m_local_csv_pth_str + "/" + m_local_csv_name_str;
+    if(!m_local_csv_ready)
+    {
+        bool new_file = false;;
+        m_local_csv_f.setFileName(fpn);
+        if(m_local_csv_f.exists())
+        {
+            m_local_csv_ready = m_local_csv_f.open(QFile::Append);
+            if(m_local_csv_ready && (m_local_csv_f.size() == 0))
+            {
+                new_file = true;
+            }
+        }
+        else
+        {
+            new_file = true;
+            m_local_csv_ready = m_local_csv_f.open(QFile::WriteOnly);
+        }
+        if(m_local_csv_ready && new_file)
+        {
+            QString header = _VIEW_DATUM_COLS_ + "\n";
+            m_local_csv_f.write(header.toUtf8());
+        }
+    }
+    if(!m_local_csv_ready)
+    {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Open/Create file %ls error!", fpn.utf16());
+    }
+    return m_local_csv_ready;
+}
+
 bool SkinDatabase::prepare_local_db()
 {
     if(!m_local_db_ready)
     {
         m_local_db = QSqlDatabase::addDatabase(QString("QSQLITE"));
 
+        /*
         m_local_db_name_str = m_db_name_str + "_" + m_intf.expt_date
                             + "-" + m_intf.expt_time;
+        */
+        m_local_db_name_str = m_db_name_str;
         m_local_db_name_str.replace(":","");
         QString fpn = m_local_db_pth_str + "/" + m_local_db_name_str;
         m_local_db.setDatabaseName(fpn);
@@ -246,18 +300,14 @@ bool SkinDatabase::create_tbls_and_views()
     return ret;
 }
 
-bool SkinDatabase::store_these_info(db_info_intf_t &info)
+bool SkinDatabase::write_local_db()
 {
-    m_intf = info;
-    if(!prepare_local_db())
-    {
-        return false;
-    }
-
+    /*Assuming m_intf contains what to be written. */
     QSqlQuery query(m_local_db);
     QSqlError sql_err;
     QString name, cmd;
     bool ret;
+
     tv_name_cmd_map_t insert_tbl_cmds[] =
     {
        {m_tbl_expts_str,
@@ -331,4 +381,60 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
         ++idx;
     }
     return true;
+}
+
+bool SkinDatabase::write_local_csv()
+{
+    /*Assuming m_intf contains what to be written. Headers are already written in
+     * prepare function. Here we just write data.
+    */
+    if(m_local_csv_ready)
+    {
+        bool ret = true;
+        int d_idx = 0;
+        qint64 wd;
+        QString line;
+        while(d_idx < m_intf.lambda_data.count())
+        {
+            line = _INSERT_VIEW_DATUM_(m_intf, d_idx) + "\n";
+            wd = m_local_csv_f.write(line.toUtf8());
+            if(wd < 0)
+            {
+                DIY_LOG(LOG_LEVEL::LOG_ERROR, "Write local csv fail, stop!!!");
+                ret = false;
+                break;
+            }
+            ++d_idx;
+        }
+        return ret;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+bool SkinDatabase::store_these_info(db_info_intf_t &info)
+{
+    bool ret = false, ret2 = false;
+    m_intf = info;
+    if(!m_local_db_ready)
+    {
+        m_local_db_ready = prepare_local_db();
+    }
+    if(m_local_db_ready)
+    {
+        ret = write_local_db();
+    }
+
+    if(!m_local_csv_ready)
+    {
+        m_local_csv_ready = prepare_local_csv();
+    }
+    if(m_local_csv_ready)
+    {
+        ret2 = write_local_csv();
+    }
+
+    return ret && ret2;
 }

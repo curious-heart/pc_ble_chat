@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QList>
 #include <QMap>
+#include <QFile>
 
 #include "diy_common_tool.h"
 /*
@@ -18,9 +19,9 @@ class SkinDatabase
 private:
     setting_db_info_t *m_remote_db_info = nullptr;
 
-    QString m_local_db_pth_str;
-    QString m_local_db_name_str;
-    bool m_local_db_ready = false;
+    QString m_local_db_pth_str, m_local_csv_pth_str;
+    QString m_local_db_name_str, m_local_csv_name_str;
+    bool m_local_db_ready = false, m_local_csv_ready = false;
 
     QSqlDatabase m_local_db, m_remote_db;
 
@@ -54,14 +55,19 @@ public:
 private:
     db_info_intf_t m_intf;
     bool prepare_local_db();
+    bool write_local_db();
     bool create_tbls_and_views();
+
+    QFile m_local_csv_f;
+    bool prepare_local_csv();
+    bool write_local_csv();
 
 public:
     SkinDatabase();
     ~SkinDatabase();
 
     void set_remote_db_info(setting_db_info_t * db_info);
-    void set_local_db_pth_str(QString str);
+    void set_local_store_pth_str(QString db, QString csv);
     bool store_these_info(db_info_intf_t &info);
 };
 
