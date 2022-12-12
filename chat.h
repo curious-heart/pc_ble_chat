@@ -171,7 +171,7 @@ private:
     const char* m_txt_ext = ".txt";
     bool m_all_dev_scan = false;
     bool m_only_rec_valid_data = true;
-    QString m_curr_file_bn_str;
+    QString m_curr_file_bn_str = "";
     light_list_t::Iterator m_curr_light_no; /* used to traverse light_list.*/
     SkinDatabase m_skin_db;
     SkinDatabase::db_info_intf_t m_db_data;
@@ -179,7 +179,12 @@ private:
     QTimer m_write_wait_resp_timer;
     QTimer m_write_done_timer;
 
-    const char* m_visual_exe_fpn = "../vway_data_visual/dist/vway_data_visual/vway_data_visual.exe";
+    /*
+     * ./m_visual_exe_fpn
+     * or
+     * ../m_visual_exe_fpn
+    */
+    const char* m_visual_exe_fpn = "vway_data_visual/dist/vway_data_visual/vway_data_visual.exe";
     //void init_write_data(); //no use now. we generate data packet dynamicly.
     void write_data_done_notify();
     void write_wait_resp_timeout();

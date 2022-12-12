@@ -415,7 +415,7 @@ bool Chat::check_and_mkpth()
     pth_flag_t pth_str_list[] = {
         {m_data_pth_str, true},
         {m_txt_pth_str, true},
-        {m_csv_pth_str, true},
+        //{m_csv_pth_str, true}, //do not use this now.
         {m_all_rec_pth_str, !m_only_rec_valid_data},
         {m_local_db_pth_str, true},
     };
@@ -998,17 +998,33 @@ void Chat::on_onlyValidDatacheckBox_stateChanged(int /*arg1*/)
 
 void Chat::on_fileVisualButton_clicked()
 {
-    if(m_curr_file_bn_str.isEmpty())
-    {
-        QMessageBox::warning(nullptr, "!!!", "没有可用文件");
-        return;
-    }
-
     QString file_pos;
     if(ui->currFileradioButton->isChecked())
     {
         file_pos = m_data_pth_str + "/" + QString(m_txt_dir_rel_name) + "/"
                 + m_curr_file_bn_str + m_txt_ext;
+        QFile f(file_pos);
+        if(!f.exists())
+        {
+            QMessageBox::warning(nullptr, "!!!", "尚未采集数据！");
+            return;
+        }
+    }
+    else if(ui->otherFileradioButton->isChecked())
+    {
+        QString fpn = QFileDialog::getOpenFileName(this,
+                                                 tr("请选择文件"),
+                                                 QDir::currentPath(),
+                                                 tr("Text Files(*.txt)"));
+        if(fpn.isEmpty())
+        {
+            return;
+        }
+        else
+        {
+            file_pos = fpn;
+            ui->currFileNameLabel->setText(QFileInfo(fpn).fileName());
+        }
     }
     else if(ui->currFolderradioButton->isChecked())
     {
@@ -1022,12 +1038,27 @@ void Chat::on_fileVisualButton_clicked()
     QStringList parms;
     parms.append(file_pos);
 
-    qDebug() << "cmd line:" << m_visual_exe_fpn;
+    QString cmd_exe1 = QString("./") + QString(m_visual_exe_fpn);
+    QFile cmd_exe_f(cmd_exe1);
+    if(!cmd_exe_f.exists())
+    {
+        QString cmd_exe2 = QString("../") + QString(m_visual_exe_fpn);
+        cmd_exe_f.setFileName(cmd_exe2);
+        if(!cmd_exe_f.exists())
+        {
+            QString err;
+            err = QString("未找到可视化执行程序！请确认位置：\n")
+                    + QString(cmd_exe1) + QString("\n或\n") + QString(cmd_exe2);
+            QMessageBox::warning(nullptr, "!!!", err);
+            return;
+        }
+    }
+    qDebug() << "cmd line:" << cmd_exe_f.fileName();//m_visual_exe_fpn;
     for(auto &s : parms)
     {
         qDebug() << s;
     }
-    if(QProcess::startDetached(m_visual_exe_fpn, parms))
+    if(QProcess::startDetached(cmd_exe_f.fileName(), parms))
     {
         QMessageBox::information(nullptr, "OK", "请稍等...");
     }

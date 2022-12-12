@@ -47,7 +47,7 @@
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
-
+#include "types_and_defs.h"
 #include "remoteselector.h"
 #include "ui_remoteselector.h"
 #include "logger.h"
@@ -221,22 +221,49 @@ void RemoteSelector::dev_discoveryErr(QBluetoothDeviceDiscoveryAgent::Error /*er
 
 void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
 {
-    QString dev_name, dev_address;
+    QString dev_address;
+    bool default_dev_setting = false;
 
     m_device = m_discoveredDevices.value(item);
     if (m_dev_discoveryAgent->isActive())
         m_dev_discoveryAgent->stop();
-    dev_name = m_device.name();
     dev_address = m_device.address().toString();
 
     m_target_dev_setting_info = m_intersted_devs.value(dev_address, nullptr);
     if(nullptr == m_target_dev_setting_info)
     {
+        QString err1 = QString("选择了一个配置文件中不存在的设备");
+        QString err2 = QString("尝试使用默认配置。");
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "%ls%ls,%ls",
+                err1.utf16(), dev_address.utf16(), err2.utf16());
+        m_target_dev_setting_info = m_intersted_devs.value(g_def_ble_dev_addr, nullptr);
+        if(nullptr == m_target_dev_setting_info)
+        {
+            QString err3 = QString("获取默认设置失败！！！");
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err3.utf16());
+            QMessageBox::critical(nullptr, "!!!", err1 + dev_address + "，" + err2
+                                                 + "\n" + err3);
+            return;
+        }
+        else
+        {
+            DIY_LOG(LOG_LEVEL::LOG_INFO, "获取默认配置成功！");
+            default_dev_setting = true;
+        }
+        /*
         QMessageBox::information(nullptr, "!!!", "不是有效设备!");
         return;
+        */
     }
 
-    m_intersted_dev_addr_str = m_target_dev_setting_info->addr;
+    if(default_dev_setting)
+    {
+        m_intersted_dev_addr_str = dev_address;
+    }
+    else
+    {
+        m_intersted_dev_addr_str = m_target_dev_setting_info->addr;
+    }
     m_intrested_srv_uuid_str = m_target_dev_setting_info->srv_uuid;
     m_intersted_char_tx_uuid
             = QBluetoothUuid(m_target_dev_setting_info->tx_char_uuid);

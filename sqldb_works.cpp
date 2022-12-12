@@ -1,5 +1,6 @@
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QStringEncoder>
 #include "sqldb_works.h"
 #include "logger.h"
 
@@ -261,6 +262,7 @@ bool SkinDatabase::prepare_local_db()
         m_local_db_ready = create_tbls_and_views();
         if(!m_local_db_ready)
         {
+            m_local_db.close();
             return m_local_db_ready;
         }
     }
@@ -394,10 +396,13 @@ bool SkinDatabase::write_local_csv()
         int d_idx = 0;
         qint64 wd;
         QString line;
+        /*Use this encoder so that the csv file can be directely displayed in excel.*/
+        QStringEncoder enc = QStringEncoder(QStringEncoder::System);
         while(d_idx < m_intf.lambda_data.count())
         {
             line = _INSERT_VIEW_DATUM_(m_intf, d_idx) + "\n";
-            wd = m_local_csv_f.write(line.toUtf8());
+            //wd = m_local_csv_f.write(line.toUtf8());
+            wd = m_local_csv_f.write(enc(line));
             if(wd < 0)
             {
                 DIY_LOG(LOG_LEVEL::LOG_ERROR, "Write local csv fail, stop!!!");
@@ -425,7 +430,9 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
     if(m_local_db_ready)
     {
         ret = write_local_db();
+        m_local_db.close();
     }
+    m_local_db_ready = false;
 
     if(!m_local_csv_ready)
     {
@@ -434,7 +441,9 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
     if(m_local_csv_ready)
     {
         ret2 = write_local_csv();
+        m_local_csv_f.close();
     }
+    m_local_csv_ready = false;
 
     return ret && ret2;
 }

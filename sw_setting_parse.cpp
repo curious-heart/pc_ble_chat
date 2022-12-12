@@ -207,6 +207,7 @@ static void take_default_lights(light_list_t &light_list, QString &dev_type)
         in->lambda = def_lights->d_arr[i];
         in->flash_period = g_def_light_flash_period;
         in->flash_gap= g_def_light_flash_gap;
+        in->idx = i+1;
 
         light_list.insert(in->lambda, in);
     }
@@ -466,6 +467,20 @@ void clear_loaded_settings(sw_settings_t &loaded)
     loaded.ble_dev_list.clear();
 }
 
+static void insert_def_dev_item(sw_settings_t &sw_s)
+{
+    setting_ble_dev_info_t *ble_dev = new setting_ble_dev_info_t;
+    assert(ble_dev != nullptr);
+    ble_dev->addr = QString(g_def_ble_dev_addr);
+    ble_dev->srv_uuid = QString(g_def_ble_srv_uuid);
+    ble_dev->rx_char_uuid = QString(g_def_ble_rx_char_uuid);
+    ble_dev->tx_char_uuid = QString(g_def_ble_tx_char_uuid);
+    ble_dev->dev_type = CLONE_DEV_TYPE_STR;
+    take_default_lights(ble_dev->light_list, ble_dev->dev_type);
+    ble_dev->single_light_wait_time = g_def_single_light_wait_time;
+    sw_s.ble_dev_list.insert(ble_dev->addr, ble_dev);
+}
+
 void load_sw_settings(sw_settings_t &sw_s)
 {
     str_bool_map_t &pt_ret = load_sw_settings_from_xml(sw_s);
@@ -479,16 +494,7 @@ void load_sw_settings(sw_settings_t &sw_s)
             DIY_LOG(LOG_LEVEL::LOG_INFO, "xml文件元素 %ls 无效",it.key().utf16());
             if(it.key() == ble_dev_list_elem())
             {
-                setting_ble_dev_info_t *ble_dev = new setting_ble_dev_info_t;
-                assert(ble_dev != nullptr);
-                ble_dev->addr = QString(g_def_ble_dev_addr);
-                ble_dev->srv_uuid = QString(g_def_ble_srv_uuid);
-                ble_dev->rx_char_uuid = QString(g_def_ble_rx_char_uuid);
-                ble_dev->tx_char_uuid = QString(g_def_ble_tx_char_uuid);
-                ble_dev->dev_type = CLONE_DEV_TYPE_STR;
-                take_default_lights(ble_dev->light_list, ble_dev->dev_type);
-                ble_dev->single_light_wait_time = g_def_single_light_wait_time;
-                sw_s.ble_dev_list.insert(ble_dev->addr, ble_dev);
+                insert_def_dev_item(sw_s);
             }
             else if(it.key() == db_info_elem())
             {
@@ -507,6 +513,17 @@ void load_sw_settings(sw_settings_t &sw_s)
             }
         }
         ++it;
+    }
+    /* The following call of inset_def_dev_item is to guarantee that the item with
+     * g_def_ble_dev_addr address is always in list, so that when there is no xml file
+     * or the user device address is not recorded in xml, the programm can work.
+     * See on_remoteDevices_itemActivated function in remoteselector.cpp.
+     */
+    setting_ble_dev_info_t * def_dev_item = sw_s.ble_dev_list.value(g_def_ble_dev_addr,
+                                                                    nullptr);
+    if(nullptr == def_dev_item)
+    {
+        insert_def_dev_item(sw_s);
     }
 
     //check single_light_wait_time and fill light idx.
