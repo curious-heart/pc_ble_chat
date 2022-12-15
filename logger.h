@@ -22,6 +22,8 @@ public:
 
     static Logger *instance();                                              //获得单例对象
     void writeLog(QString fileName,int lineNo,LOG_LEVEL level,QString log); //写入日志
+public slots:
+    void receive_log(QString loc_str, QString log_str);
 };
 
 /*
@@ -35,7 +37,9 @@ public:
 #define DIY_LOG(level, fmt_str, ...) \
     {\
         QString log = QString::asprintf(fmt_str, ##__VA_ARGS__);\
-        Logger::instance()->writeLog(__FILE__, __LINE__, (level), (log)); \
+        QString loc_str = QString(__FILE__) + QString(" [%1]").arg(__LINE__);\
+        emit record_log(loc_str, log);\
+        /*Logger::instance()->writeLog(__FILE__, __LINE__, (level), (log)); */\
         qDebug() << (log) << "\n";\
     }
 #endif // LOGGER_H

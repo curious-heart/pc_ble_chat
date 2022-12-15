@@ -99,39 +99,68 @@
         + " ON " + m_tbl_datum_str + "." + m_col_obj_id_str\
         + " = " + m_tbl_objects_str + "." + m_col_obj_id_str + ";")
 
+/* macro works fine in single thread environment, but awkward in multi-thread
+ * condition. so we change them to inline functions... */
 /*info must be of type db_info_intf_t*/
+/*
 #define _INSERT_TBL_EXPT_CMD_(info) \
     (QString("INSERT INTO ") + m_tbl_expts_str + " VALUES "\
      + "(" + "\"" + (info).expt_id + "\"" + "," + "\"" + (info).expt_desc +"\"" + ","\
     + "\"" + (info).expt_date + "\"" + "," + "\"" + (info).expt_time +"\"" + ");")
-#define _FORCE_UPD_TBL_EXPT_CLAU_(info)\
+*/
+static inline QString _INSERT_TBL_EXPT_CMD_(SkinDatabase::db_info_intf_t &info)
+{
+    return
+    (QString("INSERT INTO ") + m_tbl_expts_str + " VALUES "\
+     + "(" + "\"" + (info).expt_id + "\"" + "," + "\"" + (info).expt_desc +"\"" + ","\
+    + "\"" + (info).expt_date + "\"" + "," + "\"" + (info).expt_time +"\"" + ");");
+}
+
+static inline QString _FORCE_UPD_TBL_EXPT_CLAU_(SkinDatabase::db_info_intf_t &info)
+{
+    return
         (m_col_expt_id_str + "=" + "\"" + (info).expt_id + "\"" + ","\
         + m_col_desc_str + "=" + "\"" + (info).expt_desc + "\"" + ","\
         + m_col_date_str + "=" + "\"" + (info).expt_date +"\"" + ","\
-        + m_col_time_str + "="  + "\"" + (info).expt_time  + "\"")
+        + m_col_time_str + "="  + "\"" + (info).expt_time  + "\"");
+}
 
 /*info must be of type db_info_intf_t*/
-#define _INSERT_TBL_OBJECTS_CMD_(info) \
+static inline QString _INSERT_TBL_OBJECTS_CMD_(SkinDatabase::db_info_intf_t &info)
+{
+    return
     (QString("INSERT INTO ") + m_tbl_objects_str + " VALUES "\
      + "(" + "\"" + (info).obj_id + "\"" + "," + "\"" + (info).skin_type + "\"" + ","\
-     + "\"" + (info).obj_desc + "\"" + ");")
-#define _FORCE_UPD_TBL_OBJECTS_CLAU_(info)\
+     + "\"" + (info).obj_desc + "\"" + ");");
+}
+ static inline QString _FORCE_UPD_TBL_OBJECTS_CLAU_(SkinDatabase::db_info_intf_t &info)
+{
+    return
     (m_col_obj_id_str + "=" + "\"" + (info).obj_id  + "\"" + ","\
     + m_col_skin_type_str + "=" + "\"" + (info).skin_type + "\"" + ","\
-    + m_col_desc_str + "=" + "\"" + (info).obj_desc + "\"")
+    + m_col_desc_str + "=" + "\"" + (info).obj_desc + "\"");
+}
 
 /*info must be of type db_info_intf_t*/
-#define _INSERT_TBL_DEVICES_CMD_(info) \
+static inline QString _INSERT_TBL_DEVICES_CMD_(SkinDatabase::db_info_intf_t &info)
+{
+    return
     (QString("INSERT INTO ") + m_tbl_devices_str + " VALUES "\
      + "("  + "\"" + (info).dev_id + "\"" + "," + "\"" + (info).dev_addr + "\"" + ","\
-     + "\"" + (info).dev_desc + "\"" + ");")
-#define _FORCE_UPD_TBL_DEVICES_CLAU_(info)\
+     + "\"" + (info).dev_desc + "\"" + ");");
+}
+static inline QString _FORCE_UPD_TBL_DEVICES_CLAU_(SkinDatabase::db_info_intf_t &info)
+{
+    return
         (m_col_dev_id_str + "=" + "\"" + (info).dev_id + "\"" + ","\
         + m_col_dev_addr_str + "=" + "\"" + (info).dev_addr + "\"" + ","\
-        + m_col_desc_str + "=" + "\"" + (info).dev_desc + "\"")
+        + m_col_desc_str + "=" + "\"" + (info).dev_desc + "\"");
+}
 
 /*info must be of type db_info_intf_t*/
-#define _INSERT_TBL_DATUM_CMD_(info, i) \
+static inline QString _INSERT_TBL_DATUM_CMD_(SkinDatabase::db_info_intf_t &info, int i)
+{
+    return
     (QString("INSERT INTO ") + m_tbl_datum_str\
      + " ("\
      + m_col_obj_id_str + "," + m_col_pos_str + ","\
@@ -145,15 +174,19 @@
      + QString::number((info).lambda_data[i].data) + ","\
      + "\"" + (info).rec_date + "\"" + ","  + "\"" + (info).rec_time + "\"" + ","\
      + "\"" + (info).dev_id + "\"" + "," + "\"" + (info).expt_id + "\""\
-     + ");")
+     + ");");
+}
 
-/*This macro is used for writing local csv file. info must be of type db_info_intf_t*/
-#define _INSERT_VIEW_DATUM_(info, i) \
+/*This is used for writing local csv file. info must be of type db_info_intf_t*/
+static inline QString _INSERT_VIEW_DATUM_(SkinDatabase::db_info_intf_t &info, int i)
+{
+    return
      ((info).obj_id+ "," +  (info).skin_type + "," + (info).pos+ ","\
      + QString::number((info).lambda_data[i].lambda) + ","\
      + QString::number((info).lambda_data[i].data) + ","\
     + (info).rec_date + "," + (info).rec_time + ","\
-    + (info).dev_id + ","+ (info).expt_id)
+    + (info).dev_id + ","+ (info).expt_id);
+}
 
 #define _SQLITE_INSERT_UPDATE_CLAU_ QString("ON CONFLICT DO UPDATE SET")
 #define _MYSQL_INSERT_UPDATE_CLAU_  QString("ON DUPLICATE KEY UPDATE")
@@ -259,7 +292,7 @@ bool SkinDatabase::prepare_local_db()
            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Local db %ls open error!", fpn.utf16());
            return m_local_db_ready;
         }
-        m_local_db_ready = create_tbls_and_views();
+        m_local_db_ready = create_tbls_and_views(m_local_db);
         if(!m_local_db_ready)
         {
             m_local_db.close();
@@ -269,9 +302,12 @@ bool SkinDatabase::prepare_local_db()
     return m_local_db_ready;
 }
 
-bool SkinDatabase::create_tbls_and_views()
+/*
+ * This functon may be invoked from multi threads, so it should be thread safe.
+*/
+bool SkinDatabase::create_tbls_and_views(QSqlDatabase &qdb)
 {
-    QSqlQuery query(m_local_db);
+    QSqlQuery query(qdb);
     bool ret = true;
     QString name, cmd;
     tv_name_cmd_map_t create_tv_cmds[] =
@@ -302,10 +338,17 @@ bool SkinDatabase::create_tbls_and_views()
     return ret;
 }
 
-bool SkinDatabase::write_local_db()
+bool SkinDatabase::write_local_db(QSqlDatabase &qdb, db_info_intf_t &intf)
 {
-    /*Assuming m_intf contains what to be written. */
-    QSqlQuery query(m_local_db);
+    return write_db(qdb, intf, SkinDatabase::LOCAL);
+}
+
+/*
+ * This functon may be invoked from multi threads, so it should be thread safe.
+*/
+bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf, db_pos_t /*db_pos*/)
+{
+    QSqlQuery query(qdb);
     QSqlError sql_err;
     QString name, cmd;
     bool ret;
@@ -313,14 +356,14 @@ bool SkinDatabase::write_local_db()
     tv_name_cmd_map_t insert_tbl_cmds[] =
     {
        {m_tbl_expts_str,
-            _INSERT_TBL_EXPT_CMD_(m_intf), _FORCE_UPD_TBL_EXPT_CLAU_(m_intf),
-            m_intf.expt_changed},
+            _INSERT_TBL_EXPT_CMD_(intf), _FORCE_UPD_TBL_EXPT_CLAU_(intf),
+            intf.expt_changed},
        {m_tbl_objects_str,
-            _INSERT_TBL_OBJECTS_CMD_(m_intf), _FORCE_UPD_TBL_OBJECTS_CLAU_(m_intf),
-            m_intf.obj_changed},
+            _INSERT_TBL_OBJECTS_CMD_(intf), _FORCE_UPD_TBL_OBJECTS_CLAU_(intf),
+            intf.obj_changed},
        {m_tbl_devices_str,
-            _INSERT_TBL_DEVICES_CMD_(m_intf), _FORCE_UPD_TBL_DEVICES_CLAU_(m_intf),
-            m_intf.dev_changed},
+            _INSERT_TBL_DEVICES_CMD_(intf), _FORCE_UPD_TBL_DEVICES_CLAU_(intf),
+            intf.dev_changed},
        {m_tbl_datum_str, "", "", true},
     };
 
@@ -330,9 +373,9 @@ bool SkinDatabase::write_local_db()
         name = insert_tbl_cmds[idx].tv_name;
         if(m_tbl_datum_str == name)
         {
-            while(d_idx < m_intf.lambda_data.count())
+            while(d_idx < intf.lambda_data.count())
             {
-                cmd =  _INSERT_TBL_DATUM_CMD_(m_intf, d_idx);
+                cmd =  _INSERT_TBL_DATUM_CMD_(intf, d_idx);
                 ret = query.exec(cmd);
                 if(!ret)
                 {
@@ -385,11 +428,9 @@ bool SkinDatabase::write_local_db()
     return true;
 }
 
-bool SkinDatabase::write_local_csv()
+bool SkinDatabase::write_local_csv(db_info_intf_t &intf)
 {
-    /*Assuming m_intf contains what to be written. Headers are already written in
-     * prepare function. Here we just write data.
-    */
+    /* Headers are already written in prepare function. Here we just write data.*/
     if(m_local_csv_ready)
     {
         bool ret = true;
@@ -398,9 +439,9 @@ bool SkinDatabase::write_local_csv()
         QString line;
         /*Use this encoder so that the csv file can be directely displayed in excel.*/
         QStringEncoder enc = QStringEncoder(QStringEncoder::System);
-        while(d_idx < m_intf.lambda_data.count())
+        while(d_idx < intf.lambda_data.count())
         {
-            line = _INSERT_VIEW_DATUM_(m_intf, d_idx) + "\n";
+            line = _INSERT_VIEW_DATUM_(intf, d_idx) + "\n";
             //wd = m_local_csv_f.write(line.toUtf8());
             wd = m_local_csv_f.write(enc(line));
             if(wd < 0)
@@ -429,7 +470,7 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
     }
     if(m_local_db_ready)
     {
-        ret = write_local_db();
+        ret = write_local_db(m_local_db, m_intf);
         m_local_db.close();
     }
     m_local_db_ready = false;
@@ -440,7 +481,7 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
     }
     if(m_local_csv_ready)
     {
-        ret2 = write_local_csv();
+        ret2 = write_local_csv(m_intf);
         m_local_csv_f.close();
     }
     m_local_csv_ready = false;

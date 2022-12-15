@@ -48,3 +48,5 @@ void Logger::writeLog(QString fileName, int lineNo, LOG_LEVEL level, QString msg
     file.flush();
     file.close();
 }
+void Logger::receive_log(QString loc_str, QString log_str)
+{}

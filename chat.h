@@ -51,11 +51,11 @@
 #include "ui_chat.h"
 
 #include <QtWidgets/qdialog.h>
+#include <QThread>
 #include "remoteselector.h"
 #include <QtBluetooth/qbluetoothhostinfo.h>
 #include "characteristicinfo.h"
 #include "serviceinfo.h"
-#include "diy_common_tool.h"
 #include <QFile>
 #include <QDir>
 #include <QTimer>
@@ -196,6 +196,10 @@ private:
     void set_manual_cmd_btn();
 
     sw_settings_t m_sw_settings;
+
+    QThread m_log_thread;
+signals:
+    void record_log(QString loc_str, QString log_str);
 public:
 };
 //! [declaration]

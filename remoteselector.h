@@ -163,6 +163,8 @@ private slots:
 
 Q_SIGNALS:
     void disconnected();
+signals:
+    void record_log(QString loc_str, QString log_str);
 };
 
 #endif // REMOTESELECTOR_H

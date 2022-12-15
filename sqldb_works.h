@@ -53,15 +53,21 @@ public:
     }db_info_intf_t;
 
 private:
+    typedef enum
+    {
+        LOCAL,
+        REMOTE,
+    }db_pos_t;
     db_info_intf_t m_intf;
     bool prepare_local_db();
-    bool write_local_db();
-    bool create_tbls_and_views();
+    bool write_local_db(QSqlDatabase &qdb, db_info_intf_t &intf);
+    bool create_tbls_and_views(QSqlDatabase &qdb);
 
     QFile m_local_csv_f;
     bool prepare_local_csv();
-    bool write_local_csv();
+    bool write_local_csv(db_info_intf_t &intf);
 
+    bool write_db(QSqlDatabase &qdb, db_info_intf_t &intf, db_pos_t db_pos);
 public:
     SkinDatabase();
     ~SkinDatabase();
@@ -69,6 +75,8 @@ public:
     void set_remote_db_info(setting_db_info_t * db_info);
     void set_local_store_pth_str(QString db, QString csv);
     bool store_these_info(db_info_intf_t &info);
+signals:
+    void record_log(QString loc_str, QString log_str);
 };
 
 #endif // SQLDB_WORKS_H
