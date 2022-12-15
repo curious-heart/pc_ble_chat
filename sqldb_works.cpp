@@ -488,3 +488,11 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
 
     return ret && ret2;
 }
+
+/*
+ * This functon may be invoked from multi threads, so it should be thread safe.
+*/
+bool SkinDatabase::write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf)
+{
+    return write_db(qdb, intf, SkinDatabase::REMOTE);
+}

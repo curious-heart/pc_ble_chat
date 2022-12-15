@@ -88,10 +88,6 @@ Chat::Chat(QWidget *parent)
     connect(ui->disconnButton, &QPushButton::clicked,
             this, &Chat::on_disconnButton_clicked);
 
-    Logger *log_ins = Logger::instance();
-    log_ins->moveToThread(&m_log_thread);
-    connect(&m_log_thread, &QThread::finished, log_ins, &QObject::deleteLater);
-    connect(this, &Chat::record_log, log_ins, &Logger::receive_log, Qt::QueuedConnection);
     //! [Construct UI]
 
     localAdapters = QBluetoothLocalDevice::allDevices();

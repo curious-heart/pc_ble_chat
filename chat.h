@@ -197,9 +197,8 @@ private:
 
     sw_settings_t m_sw_settings;
 
-    QThread m_log_thread;
-signals:
-    void record_log(QString loc_str, QString log_str);
+    QThread m_remote_db_thread;
+
 public:
 };
 //! [declaration]

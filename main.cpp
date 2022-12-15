@@ -47,12 +47,12 @@
 ** $QT_END_LICENSE$
 **
 ****************************************************************************/
-
-#include "chat.h"
-
 #include <QtWidgets/qapplication.h>
 //#include <QtCore/QLoggingCategory>
 #include <QTextCodec>
+
+#include "logger.h"
+#include "chat.h"
 
 int main(int argc, char *argv[])
 {
@@ -76,6 +76,9 @@ int main(int argc, char *argv[])
     QTextCodec::setCodecForLocale(codec);
 #endif
 
+    QThread log_thread;
+    start_log_thread(log_thread);
+
     Chat d;
     QObject::connect(&d, &Chat::accepted, &app, &QApplication::quit);
 
@@ -91,6 +94,8 @@ int main(int argc, char *argv[])
 #endif
 
     app.exec();
+
+    end_log_thread(log_thread);
 
     return 0;
 }
