@@ -38,6 +38,6 @@ public:
         srvr_port = 0;
         valid = false;
     }
-    void log_print();
+    QString log_print(bool dbg = true);
 }setting_db_info_t;
 #endif // DIY_COMMON_TOOL_H

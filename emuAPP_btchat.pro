@@ -18,6 +18,7 @@ SOURCES = \
     chat.cpp \
     remoteselector.cpp \
     serviceinfo.cpp \
+    sqldb_remote_worker.cpp \
     sqldb_works.cpp \
     sw_setting_parse.cpp \
     types_and_defs.cpp
@@ -30,6 +31,7 @@ HEADERS = \
     logger.h \
     remoteselector.h \
     serviceinfo.h \
+    sqldb_remote_worker.h \
     sqldb_works.h \
     sw_setting_parse.h \
     types_and_defs.h

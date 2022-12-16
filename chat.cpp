@@ -114,7 +114,30 @@ Chat::Chat(QWidget *parent)
     load_sw_settings(m_sw_settings);
     if(m_sw_settings.oth_settings.use_remote_db)
     {
+        /*start a thread to write remote database.*/
         m_skin_db.set_remote_db_info(&m_sw_settings.db_info);
+        m_rdb_worker = new SqlDbRemoteWorker;
+        if(nullptr == m_rdb_worker)
+        {
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "new SqlDbRemoteWorker error!");
+            m_skin_db.set_remote_db_info(nullptr);
+        }
+        else
+        {
+            m_rdb_worker->moveToThread(&m_rdb_thread);
+            connect(&m_rdb_thread, &QThread::finished,
+                    m_rdb_worker, &QObject::deleteLater);
+            connect(&m_skin_db, &SkinDatabase::prepare_rdb_sig,
+                    m_rdb_worker, &SqlDbRemoteWorker::prepare_rdb);
+            connect(&m_skin_db, &SkinDatabase::write_rdb_sig,
+                    m_rdb_worker, &SqlDbRemoteWorker::write_rdb);
+            connect(&m_skin_db, &SkinDatabase::close_rdb_sig,
+                    m_rdb_worker, &SqlDbRemoteWorker::close_rdb);
+            m_rdb_thread.start();
+
+            DIY_LOG(LOG_LEVEL::LOG_INFO, "main thread: %u",
+                    (quint64)(QThread::currentThreadId()));
+        }
     }
     else
     {
@@ -203,6 +226,14 @@ Chat::~Chat()
         m_file_write_ready = false;
     }
     clear_loaded_settings(m_sw_settings);
+    if(m_rdb_worker)
+    {
+        m_skin_db.close_remote_db();
+        DIY_LOG(LOG_LEVEL::LOG_INFO,"~~~~~~~Chat distruct~~~~~~");
+        delete m_rdb_worker;
+        m_rdb_thread.quit();
+        m_rdb_thread.wait();
+    }
 }
 
 void Chat::clientConnected(const QString &name)

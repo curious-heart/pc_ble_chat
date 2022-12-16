@@ -26,8 +26,6 @@ private:
     QString m_local_db_name_str, m_local_csv_name_str;
     bool m_local_db_ready = false, m_local_csv_ready = false;
 
-    QSqlDatabase m_local_db, m_remote_db;
-
 public:
     typedef struct
     {
@@ -55,21 +53,28 @@ public:
         bool dev_changed;
     }db_info_intf_t;
 
-private:
     typedef enum
     {
         LOCAL,
         REMOTE,
     }db_pos_t;
+    typedef enum
+    {
+        DB_NONE,
+        DB_SQLITE,
+        DB_MYSQL,
+    }db_type_t;
+private:
     db_info_intf_t m_intf;
     bool prepare_local_db();
-    bool write_local_db(QSqlDatabase &qdb, db_info_intf_t &intf);
+    bool write_local_db(QSqlDatabase &qdb, db_info_intf_t &intf, db_type_t db_type);
 
     QFile m_local_csv_f;
     bool prepare_local_csv();
     bool write_local_csv(db_info_intf_t &intf);
 
-    static bool write_db(QSqlDatabase &qdb, db_info_intf_t &intf, db_pos_t db_pos);
+    static bool write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
+                         db_pos_t db_pos, db_type_t db_type);
 public:
     SkinDatabase();
     ~SkinDatabase();
@@ -77,8 +82,22 @@ public:
     void set_remote_db_info(setting_db_info_t * db_info);
     void set_local_store_pth_str(QString db, QString csv);
     bool store_these_info(db_info_intf_t &info);
-    static bool create_tbls_and_views(QSqlDatabase &qdb);
-    static bool write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf);
+    static bool create_tbls_and_views(QSqlDatabase &qdb,
+                                      db_pos_t db_pos, db_type_t db_type);
+    static bool write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
+                                db_type_t db_type);
+    void close_remote_db();
+signals:
+    bool prepare_rdb_sig(setting_db_info_t db_info);
+    bool write_rdb_sig(SkinDatabase::db_info_intf_t intf);
+    bool close_rdb_sig();
 };
 
+/*sqlerr must be of type QSqlError*/
+#define SQL_LAST_ERR_STR(sqlerr)\
+            (QString("err_txt:") + (sqlerr).text() + "\n"\
+             + "native_code:" + (sqlerr).nativeErrorCode() + "; "\
+             + "err type:" + QString("%1").arg((int)((sqlerr).type())))
+
+void remove_qt_sqldb_conn(QString conn_name);
 #endif // SQLDB_WORKS_H

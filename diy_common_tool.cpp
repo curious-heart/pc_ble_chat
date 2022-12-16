@@ -172,14 +172,21 @@ quint8 diy_crc8_8210(const QByteArray &data, int len)
 }
 
 /*Begin:setting_db_info_t member function definition.*/
-void setting_db_info_t::log_print()
+QString setting_db_info_t::log_print(bool dbg)
 {
-    qDebug() << "db_info srvr_addr:" << srvr_addr << ","
-             << "db_info srvr_port:" << srvr_port << ","
-             << "db_info db_name:" << db_name << ","
-             << "db_info login_id:" << login_id << ","
-             << "db_info login_pwd:" << login_pwd << ","
-             << "db_info dbms_name:" << dbms_name << ","
-             << "db_info dbms_ver:" << dbms_ver << "\n";
+    QString str;
+    str +=  QString("db_info srvr_addr:%1,").arg(srvr_addr)
+            + QString("db_info srvr_port:%1,").arg(srvr_port)
+            + QString("db_info db_name:%1,").arg(db_name)
+            + QString("db_info login_id:%1,").arg(login_id)
+            + QString("db_info login_pwd:%1,").arg(login_pwd)
+            + QString("db_info dbms_name:%1,").arg(dbms_name)
+            + QString("db_info dbms_ver:%1\n").arg(dbms_ver);
+    if(dbg)
+    {
+        qDebug() << str;
+    }
+
+    return str;
 }
 /*End:setting_db_info_t member function definition.*/

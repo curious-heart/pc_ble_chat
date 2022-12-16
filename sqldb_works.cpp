@@ -4,6 +4,7 @@
 #include "sqldb_works.h"
 #include "logger.h"
 
+#define LOCAL_DB_CONN_NAME QString("local_sqlite_conntection")
 /*
  * Begin: Som sqlite defines.
  * Refer to https://www.sqlite.org/rescode.html#constraint_primarykey
@@ -20,7 +21,7 @@
 #define m_db_name_str QString("detector")
 #define m_tbl_expts_str QString("experiments")
 #define m_col_expt_id_str QString("expt_id")
-#define m_col_desc_str QString("desc")
+#define m_col_desc_str QString("descpt") //"desc" is key word in my sql and can't be column.
 #define m_col_date_str QString("date")
 #define m_tbl_objects_str QString("objects")
 #define m_col_obj_id_str QString("obj_id")
@@ -39,27 +40,70 @@
 #define _TBL_EXPTS_COLS_ \
         (m_col_expt_id_str + "," + m_col_desc_str + ","\
         + m_col_date_str + "," + m_col_time_str)
-#define _CREATE_TBL_EXPTS_CMD_ \
+/*sqlite and mysql differs slightly in syntax. so we change the cmd generator
+ * from macro to function to increase flexibility.
+*/
+#define TEXT_KEY_LEN 255 //Mysql needs a length for TEXT key.
+static inline QString _CREATE_TBL_EXPTS_CMD_(SkinDatabase::db_type_t db_t)
+{
+    QString cmd;
+    cmd =
      (QString("CREATE TABLE IF NOT EXISTS ") + m_tbl_expts_str + " ("\
         + m_col_expt_id_str + QString(" TEXT,") + m_col_desc_str + QString(" TEXT,")\
         + m_col_date_str + QString(" TEXT,") + m_col_time_str + QString(" TEXT,")\
-        + QString("PRIMARY KEY(") + m_col_expt_id_str + QString(")") + ");")
+        + QString("PRIMARY KEY(") +  m_col_expt_id_str);
+    if(SkinDatabase::DB_SQLITE == db_t)
+    {
+        cmd += QString("));");
+    }
+    else //assuming DB_MYSQL
+    {
+        cmd += QString("(%1)));").arg(TEXT_KEY_LEN);
+    }
+    return cmd;
+}
 
 #define _TBL_OBJECTS_COLS_ \
         (m_col_obj_id_str + "," + m_col_skin_type_str + "," + m_col_desc_str)
-#define _CREATE_TBL_OBJECTS_CMD_ \
+static inline QString _CREATE_TBL_OBJECTS_CMD_(SkinDatabase::db_type_t db_t)
+{
+    QString cmd;
+    cmd =
      (QString("CREATE TABLE IF NOT EXISTS ") + m_tbl_objects_str + " ("\
         + m_col_obj_id_str + QString(" TEXT,") + m_col_skin_type_str + QString(" TEXT,")\
         + m_col_desc_str + QString(" TEXT,")\
-        + QString("PRIMARY KEY(") + m_col_obj_id_str + QString(")") + QString(");"))
+        + QString("PRIMARY KEY(") + m_col_obj_id_str);
+    if(SkinDatabase::DB_SQLITE == db_t)
+    {
+         cmd += QString("));");
+    }
+    else //assuming DB_MYSQL
+    {
+        cmd += QString("(%1)));").arg(TEXT_KEY_LEN);
+    }
+    return cmd;
+}
 
 #define _TBL_DEVICES_COLS_ \
         (m_col_dev_id_str + "," + m_col_dev_addr_str + "," + m_col_desc_str)
-#define _CREATE_TBL_DEVICES_CMD_ \
-     (QString("CREATE TABLE IF NOT EXISTS ") + m_tbl_devices_str + " ("\
+static inline QString _CREATE_TBL_DEVICES_CMD_(SkinDatabase::db_type_t db_t)
+{
+    QString cmd;
+    cmd =
+         (QString("CREATE TABLE IF NOT EXISTS ") + m_tbl_devices_str + " ("\
         + m_col_dev_id_str + QString(" TEXT,") + m_col_dev_addr_str + QString(" TEXT,")\
         + m_col_desc_str + QString(" TEXT,")\
-        + QString("PRIMARY KEY(") + m_col_dev_id_str + QString(")")+ QString(");"))
+        + QString("PRIMARY KEY(") + m_col_dev_id_str);
+    if(SkinDatabase::DB_SQLITE == db_t)
+    {
+         cmd += QString("));");
+    }
+    else //assuming DB_MYSQL
+    {
+        cmd += QString("(%1)));").arg(TEXT_KEY_LEN);
+    }
+    return cmd;
+}
 
 /*No rec_id.*/
 #define _TBL_DATUM_COLS_ \
@@ -68,22 +112,59 @@
         + m_col_data_str + ","\
         + m_col_date_str + "," + m_col_time_str + ","\
         + m_col_dev_id_str + "," + m_col_expt_id_str)
-#define _CREATE_TBL_DATUM_CMD_ \
+static inline QString _CREATE_TBL_DATUM_CMD_(SkinDatabase::db_type_t db_t)
+{
+    QString cmd;
+    cmd =
      (QString("CREATE TABLE IF NOT EXISTS ") + m_tbl_datum_str + " ("\
         + m_col_obj_id_str + QString(" TEXT,") + m_col_pos_str + QString(" TEXT,")\
-        + m_col_lambda_str + QString(" UNSIGNED INT,")\
-        + m_col_data_str + QString(" UNSIGNED BIG INT,")\
-        + m_col_date_str + QString(" TEXT,") + m_col_time_str + QString(" TEXT,")\
+        + m_col_lambda_str);
+    if(SkinDatabase::DB_SQLITE == db_t)
+    {
+        cmd += QString(" UNSIGNED INT,");
+    }
+    else //assuming DB_MYSQL
+    {
+        cmd += QString(" INT UNSIGNED,");
+    }
+    cmd  += m_col_data_str;
+    if(SkinDatabase::DB_SQLITE == db_t)
+    {
+        cmd += QString(" UNSIGNED BIGINT,");
+    }
+    else //assuming DB_MYSQL
+    {
+        cmd += QString(" BIGINT UNSIGNED,");
+    }
+    cmd += m_col_date_str + QString(" TEXT,") + m_col_time_str + QString(" TEXT,")\
         + m_col_dev_id_str + QString(" TEXT,") + m_col_expt_id_str + QString(" TEXT,")\
-        + m_col_rec_id_str + QString(" INTEGER,")\
-        + QString("PRIMARY KEY(") + m_col_rec_id_str + QString(")")+ QString(");"))
+        + m_col_rec_id_str + QString(" BIGINT");
+    if(SkinDatabase::DB_MYSQL == db_t)
+    {
+        cmd += QString(" AUTO_INCREMENT");
+    }
+    cmd += QString(",");
+    cmd += QString("PRIMARY KEY(") + m_col_rec_id_str + QString(")")+ QString(");");
+    return cmd;
+}
 
 #define _VIEW_DATUM_COLS_ \
         (m_col_obj_id_str + "," + m_col_skin_type_str + "," + m_col_pos_str + ","\
         + m_col_lambda_str+ "," + m_col_data_str + "," + m_col_date_str + ","\
         + m_col_time_str + "," + m_col_dev_id_str + "," + m_col_expt_id_str)
-#define _CREATE_VIEW_DATUM_CMD_ \
-    (QString("CREATE VIEW IF NOT EXISTS ") + m_view_datum_str + " AS"\
+static inline QString _CREATE_VIEW_DATUM_CMD_(SkinDatabase::db_type_t db_t)
+{
+    QString cmd;
+    if(SkinDatabase::DB_SQLITE == db_t)
+    {
+        cmd = QString("CREATE VIEW IF NOT EXISTS ") + m_view_datum_str;
+    }
+    else //assuming DB_MYSQL
+    {
+        cmd = QString("CREATE OR REPLACE VIEW ") + m_view_datum_str;
+    }
+
+    cmd += (QString(" AS")\
         + " SELECT "\
         + m_tbl_datum_str + "." + m_col_obj_id_str + ","\
         + m_tbl_objects_str + "." + m_col_skin_type_str + ","\
@@ -97,8 +178,9 @@
         + " FROM " + m_tbl_datum_str\
         + " LEFT JOIN " + m_tbl_objects_str\
         + " ON " + m_tbl_datum_str + "." + m_col_obj_id_str\
-        + " = " + m_tbl_objects_str + "." + m_col_obj_id_str + ";")
-
+        + " = " + m_tbl_objects_str + "." + m_col_obj_id_str + ";");
+    return cmd;
+}
 /* macro works fine in single thread environment, but awkward in multi-thread
  * condition. so we change them to inline functions... */
 /*info must be of type db_info_intf_t*/
@@ -108,7 +190,8 @@
      + "(" + "\"" + (info).expt_id + "\"" + "," + "\"" + (info).expt_desc +"\"" + ","\
     + "\"" + (info).expt_date + "\"" + "," + "\"" + (info).expt_time +"\"" + ");")
 */
-static inline QString _INSERT_TBL_EXPT_CMD_(SkinDatabase::db_info_intf_t &info)
+static inline QString _INSERT_TBL_EXPT_CMD_(SkinDatabase::db_info_intf_t &info,
+                                            SkinDatabase::db_type_t /*db_t*/)
 {
     return
     (QString("INSERT INTO ") + m_tbl_expts_str + " VALUES "\
@@ -116,7 +199,8 @@ static inline QString _INSERT_TBL_EXPT_CMD_(SkinDatabase::db_info_intf_t &info)
     + "\"" + (info).expt_date + "\"" + "," + "\"" + (info).expt_time +"\"" + ");");
 }
 
-static inline QString _FORCE_UPD_TBL_EXPT_CLAU_(SkinDatabase::db_info_intf_t &info)
+static inline QString _FORCE_UPD_TBL_EXPT_CLAU_(SkinDatabase::db_info_intf_t &info,
+                                                SkinDatabase::db_type_t /*db_t*/)
 {
     return
         (m_col_expt_id_str + "=" + "\"" + (info).expt_id + "\"" + ","\
@@ -126,14 +210,16 @@ static inline QString _FORCE_UPD_TBL_EXPT_CLAU_(SkinDatabase::db_info_intf_t &in
 }
 
 /*info must be of type db_info_intf_t*/
-static inline QString _INSERT_TBL_OBJECTS_CMD_(SkinDatabase::db_info_intf_t &info)
+static inline QString _INSERT_TBL_OBJECTS_CMD_(SkinDatabase::db_info_intf_t &info,
+                                               SkinDatabase::db_type_t /*db_t*/)
 {
     return
     (QString("INSERT INTO ") + m_tbl_objects_str + " VALUES "\
      + "(" + "\"" + (info).obj_id + "\"" + "," + "\"" + (info).skin_type + "\"" + ","\
      + "\"" + (info).obj_desc + "\"" + ");");
 }
- static inline QString _FORCE_UPD_TBL_OBJECTS_CLAU_(SkinDatabase::db_info_intf_t &info)
+ static inline QString _FORCE_UPD_TBL_OBJECTS_CLAU_(SkinDatabase::db_info_intf_t &info,
+                                                    SkinDatabase::db_type_t /*db_t*/)
 {
     return
     (m_col_obj_id_str + "=" + "\"" + (info).obj_id  + "\"" + ","\
@@ -142,14 +228,16 @@ static inline QString _INSERT_TBL_OBJECTS_CMD_(SkinDatabase::db_info_intf_t &inf
 }
 
 /*info must be of type db_info_intf_t*/
-static inline QString _INSERT_TBL_DEVICES_CMD_(SkinDatabase::db_info_intf_t &info)
+static inline QString _INSERT_TBL_DEVICES_CMD_(SkinDatabase::db_info_intf_t &info,
+                                               SkinDatabase::db_type_t /*db_t*/)
 {
     return
     (QString("INSERT INTO ") + m_tbl_devices_str + " VALUES "\
      + "("  + "\"" + (info).dev_id + "\"" + "," + "\"" + (info).dev_addr + "\"" + ","\
      + "\"" + (info).dev_desc + "\"" + ");");
 }
-static inline QString _FORCE_UPD_TBL_DEVICES_CLAU_(SkinDatabase::db_info_intf_t &info)
+static inline QString _FORCE_UPD_TBL_DEVICES_CLAU_(SkinDatabase::db_info_intf_t &info,
+                                                   SkinDatabase::db_type_t /*db_t*/)
 {
     return
         (m_col_dev_id_str + "=" + "\"" + (info).dev_id + "\"" + ","\
@@ -158,27 +246,40 @@ static inline QString _FORCE_UPD_TBL_DEVICES_CLAU_(SkinDatabase::db_info_intf_t 
 }
 
 /*info must be of type db_info_intf_t*/
-static inline QString _INSERT_TBL_DATUM_CMD_(SkinDatabase::db_info_intf_t &info, int i)
+static inline QString _INSERT_TBL_DATUM_CMD_(SkinDatabase::db_info_intf_t &info,
+                                             int i,
+                                             SkinDatabase::db_type_t db_t)
 {
-    return
-    (QString("INSERT INTO ") + m_tbl_datum_str\
+    QString cmd;
+    cmd = (QString("INSERT INTO ") + m_tbl_datum_str\
      + " ("\
      + m_col_obj_id_str + "," + m_col_pos_str + ","\
      + m_col_lambda_str + "," + m_col_data_str + ","\
      + m_col_date_str + "," + m_col_time_str + ","\
-     + m_col_dev_id_str + "," + m_col_expt_id_str\
-     + ") "\
+     + m_col_dev_id_str + "," + m_col_expt_id_str);
+    if(SkinDatabase::DB_MYSQL == db_t)
+    {
+       cmd += QString(",") + m_col_rec_id_str;
+    }
+    cmd += QString(") ")\
      + "VALUES "\
      + "(" + "\"" + (info).obj_id + "\"" + "," + "\"" + (info).pos + "\"" + ","\
      + QString::number((info).lambda_data[i].lambda) + ","\
      + QString::number((info).lambda_data[i].data) + ","\
      + "\"" + (info).rec_date + "\"" + ","  + "\"" + (info).rec_time + "\"" + ","\
-     + "\"" + (info).dev_id + "\"" + "," + "\"" + (info).expt_id + "\""\
-     + ");");
+     + "\"" + (info).dev_id + "\"" + "," + "\"" + (info).expt_id + "\"";
+    if(SkinDatabase::DB_MYSQL == db_t)
+    {
+        cmd += QString(", NULL");
+    }
+    cmd += QString(");");
+    return cmd;
 }
 
 /*This is used for writing local csv file. info must be of type db_info_intf_t*/
-static inline QString _INSERT_VIEW_DATUM_(SkinDatabase::db_info_intf_t &info, int i)
+static inline QString _INSERT_VIEW_DATUM_(SkinDatabase::db_info_intf_t &info,
+                                          int i,
+                                          SkinDatabase::db_type_t /*db_t*/)
 {
     return
      ((info).obj_id+ "," +  (info).skin_type + "," + (info).pos+ ","\
@@ -221,11 +322,18 @@ SkinDatabase::~SkinDatabase()
     m_intf.lambda_data.clear();
     if(m_local_db_ready)
     {
-        m_local_db.close();
+        remove_qt_sqldb_conn(LOCAL_DB_CONN_NAME);
+        m_local_db_ready = false;
     }
     if(m_local_csv_ready)
     {
         m_local_csv_f.close();
+        m_local_csv_ready = false;
+    }
+    if(m_remote_db_info)
+    {
+        close_remote_db();
+        m_remote_db_info = nullptr;
     }
 }
 
@@ -276,27 +384,51 @@ bool SkinDatabase::prepare_local_db()
 {
     if(!m_local_db_ready)
     {
-        m_local_db = QSqlDatabase::addDatabase(QString("QSQLITE"));
+        while(true)
+        {
+            QSqlError sql_err;
+            QString sqlerr_str;
+            QSqlDatabase local_db;
 
-        /*
-        m_local_db_name_str = m_db_name_str + "_" + m_intf.expt_date
-                            + "-" + m_intf.expt_time;
-        */
-        m_local_db_name_str = m_db_name_str;
-        m_local_db_name_str.replace(":","");
-        QString fpn = m_local_db_pth_str + "/" + m_local_db_name_str;
-        m_local_db.setDatabaseName(fpn);
-        m_local_db_ready = m_local_db.open();
-        if(!m_local_db_ready)
-        {
-           DIY_LOG(LOG_LEVEL::LOG_ERROR, "Local db %ls open error!", fpn.utf16());
-           return m_local_db_ready;
+            local_db = QSqlDatabase::addDatabase(QString("QSQLITE"), LOCAL_DB_CONN_NAME);
+            if(!local_db.isValid())
+            {
+                sql_err = local_db.lastError();
+                sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+                DIY_LOG(LOG_LEVEL::LOG_ERROR, "addDatabase QSQLITE error!\n%ls",
+                        sqlerr_str.utf16());
+                m_local_db_ready = false;
+                break;
+            }
+            /*
+            m_local_db_name_str = m_db_name_str + "_" + m_intf.expt_date
+                                + "-" + m_intf.expt_time;
+            */
+            m_local_db_name_str = m_db_name_str;
+            m_local_db_name_str.replace(":","");
+            QString fpn = m_local_db_pth_str + "/" + m_local_db_name_str;
+            local_db.setDatabaseName(fpn);
+            m_local_db_ready = local_db.open();
+            if(!m_local_db_ready)
+            {
+                sql_err = local_db.lastError();
+                sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+                DIY_LOG(LOG_LEVEL::LOG_ERROR, "Local db %ls open error!\n%ls",
+                        fpn.utf16(), sqlerr_str.utf16());
+                break;
+            }
+            m_local_db_ready = create_tbls_and_views(local_db, LOCAL, DB_SQLITE);
+            if(!m_local_db_ready)
+            {
+                local_db.close();
+                break;
+            }
+
+            break;
         }
-        m_local_db_ready = create_tbls_and_views(m_local_db);
         if(!m_local_db_ready)
         {
-            m_local_db.close();
-            return m_local_db_ready;
+            QSqlDatabase::removeDatabase(LOCAL_DB_CONN_NAME);
         }
     }
     return m_local_db_ready;
@@ -305,18 +437,19 @@ bool SkinDatabase::prepare_local_db()
 /*
  * This functon may be invoked from multi threads, so it should be thread safe.
 */
-bool SkinDatabase::create_tbls_and_views(QSqlDatabase &qdb)
+bool SkinDatabase::create_tbls_and_views(QSqlDatabase &qdb,
+                                         db_pos_t /*db_pos*/, db_type_t db_type)
 {
     QSqlQuery query(qdb);
     bool ret = true;
     QString name, cmd;
     tv_name_cmd_map_t create_tv_cmds[] =
     {
-       {m_tbl_expts_str, _CREATE_TBL_EXPTS_CMD_, "", true},
-       {m_tbl_objects_str, _CREATE_TBL_OBJECTS_CMD_, "", true},
-       {m_tbl_devices_str, _CREATE_TBL_DEVICES_CMD_, "", true},
-       {m_tbl_datum_str, _CREATE_TBL_DATUM_CMD_, "", true},
-       {m_view_datum_str, _CREATE_VIEW_DATUM_CMD_, "", true},
+       {m_tbl_expts_str, _CREATE_TBL_EXPTS_CMD_(db_type), "", true},
+       {m_tbl_objects_str, _CREATE_TBL_OBJECTS_CMD_(db_type), "", true},
+       {m_tbl_devices_str, _CREATE_TBL_DEVICES_CMD_(db_type), "", true},
+       {m_tbl_datum_str, _CREATE_TBL_DATUM_CMD_(db_type), "", true},
+       {m_view_datum_str, _CREATE_VIEW_DATUM_CMD_(db_type), "", true},
     };
 
     /*Create TABLE and VIEW*/
@@ -328,8 +461,11 @@ bool SkinDatabase::create_tbls_and_views(QSqlDatabase &qdb)
         ret = query.exec(cmd);
         if(!ret)
         {
-           DIY_LOG(LOG_LEVEL::LOG_ERROR, "Create table/view %ls fail! Cmd:\n%ls",
-                   name.utf16(), cmd.utf16());
+            QSqlError sql_err = query.lastError();
+            QString sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+            DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                    "Create table/view %ls fail!\nCmd:%ls\n%ls",
+                    name.utf16(), cmd.utf16(), sqlerr_str.utf16());
            return ret;
         }
         ++idx;
@@ -338,31 +474,37 @@ bool SkinDatabase::create_tbls_and_views(QSqlDatabase &qdb)
     return ret;
 }
 
-bool SkinDatabase::write_local_db(QSqlDatabase &qdb, db_info_intf_t &intf)
+bool SkinDatabase::write_local_db(QSqlDatabase &qdb, db_info_intf_t &intf,
+                                  db_type_t db_type)
 {
-    return write_db(qdb, intf, SkinDatabase::LOCAL);
+    return write_db(qdb, intf, SkinDatabase::LOCAL, db_type);
 }
 
 /*
  * This functon may be invoked from multi threads, so it should be thread safe.
 */
-bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf, db_pos_t /*db_pos*/)
+bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
+                            db_pos_t /*db_pos*/, db_type_t db_type)
 {
     QSqlQuery query(qdb);
     QSqlError sql_err;
+    QString sqlerr_str;
     QString name, cmd;
     bool ret;
 
     tv_name_cmd_map_t insert_tbl_cmds[] =
     {
        {m_tbl_expts_str,
-            _INSERT_TBL_EXPT_CMD_(intf), _FORCE_UPD_TBL_EXPT_CLAU_(intf),
+            _INSERT_TBL_EXPT_CMD_(intf, db_type),
+            _FORCE_UPD_TBL_EXPT_CLAU_(intf, db_type),
             intf.expt_changed},
        {m_tbl_objects_str,
-            _INSERT_TBL_OBJECTS_CMD_(intf), _FORCE_UPD_TBL_OBJECTS_CLAU_(intf),
+            _INSERT_TBL_OBJECTS_CMD_(intf, db_type),
+            _FORCE_UPD_TBL_OBJECTS_CLAU_(intf, db_type),
             intf.obj_changed},
        {m_tbl_devices_str,
-            _INSERT_TBL_DEVICES_CMD_(intf), _FORCE_UPD_TBL_DEVICES_CLAU_(intf),
+            _INSERT_TBL_DEVICES_CMD_(intf, db_type),
+            _FORCE_UPD_TBL_DEVICES_CLAU_(intf, db_type),
             intf.dev_changed},
        {m_tbl_datum_str, "", "", true},
     };
@@ -375,16 +517,16 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf, db_pos_t /*
         {
             while(d_idx < intf.lambda_data.count())
             {
-                cmd =  _INSERT_TBL_DATUM_CMD_(intf, d_idx);
+                cmd =  _INSERT_TBL_DATUM_CMD_(intf, d_idx, db_type);
                 ret = query.exec(cmd);
                 if(!ret)
                 {
                     sql_err = query.lastError();
+                    sqlerr_str = SQL_LAST_ERR_STR(sql_err);
                     DIY_LOG(LOG_LEVEL::LOG_ERROR,
                             "Insert table %ls fail, stop!!!\n"
-                            "Cmd:\n%ls\nError:type %d, code %ls,%ls",
-                           name.utf16(), cmd.utf16(), (int)sql_err.type(),
-                           sql_err.nativeErrorCode().utf16(), sql_err.text().utf16());
+                            "Cmd:%ls\n%ls",
+                           name.utf16(), cmd.utf16(),sqlerr_str.utf16());
                     return false;
                 }
                 ++d_idx;
@@ -399,28 +541,42 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf, db_pos_t /*
             if(!ret)
             {
                 sql_err = query.lastError();
+                sqlerr_str = SQL_LAST_ERR_STR(sql_err);
                 quint32 err_code = sql_err.nativeErrorCode().toUInt();
                 if(err_code == SQLITE_CONSTRAINT_PRIMARYKEY
                         || err_code == SQLITE_CONSTRAINT_UNIQUE)
                 {
-                    DIY_LOG(LOG_LEVEL::LOG_INFO, "inser duplicate, now update");
+                    DIY_LOG(LOG_LEVEL::LOG_INFO,
+                            "Inser duplicate,cmd:%ls\nNow update!", cmd.utf16());
                     /*update*/
                     cmd.remove(";");
                     cmd += " " + _SQLITE_INSERT_UPDATE_CLAU_ + " "
                             + insert_tbl_cmds[idx].force_upd_clau + ";";
                     ret = query.exec(cmd);
-                    if(ret)
+                    if(!ret)
+                    {
+                        sql_err = query.lastError();
+                        sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+                        DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                                "Update table %ls fail, stop!!!\n"
+                                "Cmd:%ls\n%ls",
+                               name.utf16(), cmd.utf16(), sqlerr_str.utf16());
+                        return false;
+                    }
+                    else
                     {
                         ++idx;
                         continue;
                     }
                 }
-                DIY_LOG(LOG_LEVEL::LOG_ERROR,
-                        "Insert table %ls fail, stop!!!\n"
-                        "Cmd:\n%ls\nError:type %d, code %ls,%ls",
-                       name.utf16(), cmd.utf16(), (int)sql_err.type(),
-                       sql_err.nativeErrorCode().utf16(), sql_err.text().utf16());
-                return false;
+                else
+                {
+                    DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                            "Insert table %ls fail, stop!!!\n"
+                            "Cmd:%ls\n%ls",
+                           name.utf16(), cmd.utf16(), sqlerr_str.utf16());
+                    return false;
+                }
             }
         }
         ++idx;
@@ -441,7 +597,7 @@ bool SkinDatabase::write_local_csv(db_info_intf_t &intf)
         QStringEncoder enc = QStringEncoder(QStringEncoder::System);
         while(d_idx < intf.lambda_data.count())
         {
-            line = _INSERT_VIEW_DATUM_(intf, d_idx) + "\n";
+            line = _INSERT_VIEW_DATUM_(intf, d_idx, DB_NONE) + "\n";
             //wd = m_local_csv_f.write(line.toUtf8());
             wd = m_local_csv_f.write(enc(line));
             if(wd < 0)
@@ -470,8 +626,13 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
     }
     if(m_local_db_ready)
     {
-        ret = write_local_db(m_local_db, m_intf);
-        m_local_db.close();
+        {
+            QSqlDatabase local_db;
+            local_db = QSqlDatabase::database(LOCAL_DB_CONN_NAME);
+            ret = write_local_db(local_db, m_intf, SkinDatabase::DB_SQLITE);
+            local_db.close();
+        }
+        QSqlDatabase::removeDatabase(LOCAL_DB_CONN_NAME);
     }
     m_local_db_ready = false;
 
@@ -486,13 +647,37 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
     }
     m_local_csv_ready = false;
 
+    if(m_remote_db_info)
+    {
+        emit prepare_rdb_sig(*m_remote_db_info);
+        emit write_rdb_sig(m_intf);
+    }
+
     return ret && ret2;
 }
 
 /*
  * This functon may be invoked from multi threads, so it should be thread safe.
 */
-bool SkinDatabase::write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf)
+bool SkinDatabase::write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
+                                   db_type_t db_type)
 {
-    return write_db(qdb, intf, SkinDatabase::REMOTE);
+    return write_db(qdb, intf, SkinDatabase::REMOTE, db_type);
+}
+ void SkinDatabase::close_remote_db()
+{
+     emit close_rdb_sig();
+ }
+////////////////////////////////////////////////////////////////
+void remove_qt_sqldb_conn(QString conn_name)
+{
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "remove db conn %ls in thread: %u",
+            conn_name.utf16(),
+            (quint64)(QThread::currentThreadId()));
+    {
+        QSqlDatabase local_db;
+        local_db = QSqlDatabase::database(conn_name);
+        local_db.close();
+    }
+    QSqlDatabase::removeDatabase(conn_name);
 }

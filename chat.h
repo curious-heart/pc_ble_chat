@@ -66,6 +66,7 @@
 
 #include "sw_setting_parse.h"
 #include "sqldb_works.h"
+#include "sqldb_remote_worker.h"
 
 QT_USE_NAMESPACE
 
@@ -197,7 +198,8 @@ private:
 
     sw_settings_t m_sw_settings;
 
-    QThread m_remote_db_thread;
+    QThread m_rdb_thread;
+    SqlDbRemoteWorker *m_rdb_worker = nullptr;
 
 public:
 };
