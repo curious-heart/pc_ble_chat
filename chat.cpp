@@ -78,6 +78,11 @@ static const QLatin1String reverseUuid("c8e96402-0102-cf9c-274b-701a950fe1e8");
 Chat::Chat(QWidget *parent)
     : QDialog(parent), ui(new Ui_Chat)
 {
+    start_log_thread(m_log_thread);
+
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "+++++++++++++Chat construct in thread: %u",
+            (quint64)(QThread::currentThreadId()));
+
     //! [Construct UI]
     ui->setupUi(this);
 
@@ -112,39 +117,21 @@ Chat::Chat(QWidget *parent)
 
     //try to load settings from xml.
     load_sw_settings(m_sw_settings);
+    //new db management object.
+    //chat only manages m_skin_db, and the latter manages remote db and thread.
     if(m_sw_settings.oth_settings.use_remote_db)
     {
-        /*start a thread to write remote database.*/
-        m_skin_db.set_remote_db_info(&m_sw_settings.db_info);
-        m_rdb_worker = new SqlDbRemoteWorker;
-        if(nullptr == m_rdb_worker)
-        {
-            DIY_LOG(LOG_LEVEL::LOG_ERROR, "new SqlDbRemoteWorker error!");
-            m_skin_db.set_remote_db_info(nullptr);
-        }
-        else
-        {
-            m_rdb_worker->moveToThread(&m_rdb_thread);
-            connect(&m_rdb_thread, &QThread::finished,
-                    m_rdb_worker, &QObject::deleteLater);
-            connect(&m_skin_db, &SkinDatabase::prepare_rdb_sig,
-                    m_rdb_worker, &SqlDbRemoteWorker::prepare_rdb);
-            connect(&m_skin_db, &SkinDatabase::write_rdb_sig,
-                    m_rdb_worker, &SqlDbRemoteWorker::write_rdb);
-            connect(&m_skin_db, &SkinDatabase::close_rdb_sig,
-                    m_rdb_worker, &SqlDbRemoteWorker::close_rdb);
-            m_rdb_thread.start();
-
-            DIY_LOG(LOG_LEVEL::LOG_INFO, "main thread: %u",
-                    (quint64)(QThread::currentThreadId()));
-        }
+        m_skin_db = new SkinDatabase(&m_sw_settings.db_info);
     }
     else
     {
-        m_skin_db.set_remote_db_info(nullptr);
+        m_skin_db = new SkinDatabase(nullptr);
     }
-
-    //init_write_data(); //no use now.
+    if(!m_skin_db)
+    {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                "New SkinDatabase error, so all db and csv store can't be taken.");
+    }
 
     connect(&m_write_wait_resp_timer, &QTimer::timeout,
            this, &Chat::write_wait_resp_timeout);
@@ -163,7 +150,10 @@ Chat::Chat(QWidget *parent)
     m_txt_pth_str = m_data_pth_str  + "/" + QString(m_txt_dir_rel_name);
     m_csv_pth_str = m_data_pth_str  + "/" + QString(m_csv_dir_rel_name);
     m_local_db_pth_str = m_data_pth_str + "/" + QString(m_local_db_dir_rel_name);
-    m_skin_db.set_local_store_pth_str(m_local_db_pth_str, m_data_pth_str);
+    if(m_skin_db)
+    {
+        m_skin_db->set_local_store_pth_str(m_local_db_pth_str, m_data_pth_str);
+    }
 
     m_adapter = localAdapters.isEmpty() ? QBluetoothAddress() :
                            localAdapters.at(currentAdapterIndex).address();
@@ -214,6 +204,9 @@ Chat::Chat(QWidget *parent)
 
 Chat::~Chat()
 {
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "----------Chat destructor in thread: %u",
+            (quint64)(QThread::currentThreadId()));
+
     delete m_remoteSelector;
 
     if(m_file_write_ready)
@@ -226,14 +219,13 @@ Chat::~Chat()
         m_file_write_ready = false;
     }
     clear_loaded_settings(m_sw_settings);
-    if(m_rdb_worker)
+    if(m_skin_db)
     {
-        m_skin_db.close_remote_db();
-        DIY_LOG(LOG_LEVEL::LOG_INFO,"~~~~~~~Chat distruct~~~~~~");
-        delete m_rdb_worker;
-        m_rdb_thread.quit();
-        m_rdb_thread.wait();
+        delete m_skin_db;
+        DIY_LOG(LOG_LEVEL::LOG_INFO,"~~~~~~~m_skin_db deleted~~~~~~");
     }
+
+    end_log_thread(m_log_thread);
 }
 
 void Chat::clientConnected(const QString &name)
@@ -853,9 +845,9 @@ void Chat::write_data_done_handle(bool done)
         m_file_write_ready = false;
         ui->currFileNameLabel->setText(m_curr_file_bn_str);
     }
-    if(non_empty)
+    if(non_empty && m_skin_db)
     {
-        if(m_skin_db.store_these_info(m_db_data))
+        if(m_skin_db->store_these_info(m_db_data))
         {
             m_first_check = false;
         }

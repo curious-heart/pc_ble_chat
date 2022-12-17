@@ -9,6 +9,7 @@
 #include <QList>
 #include <QMap>
 #include <QFile>
+#include <QThread>
 
 #include "diy_common_tool.h"
 /*
@@ -76,7 +77,7 @@ private:
     static bool write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                          db_pos_t db_pos, db_type_t db_type);
 public:
-    SkinDatabase();
+    SkinDatabase(setting_db_info_t * rdb_info = nullptr);
     ~SkinDatabase();
 
     void set_remote_db_info(setting_db_info_t * db_info);
@@ -86,11 +87,13 @@ public:
                                       db_pos_t db_pos, db_type_t db_type);
     static bool write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                                 db_type_t db_type);
-    void close_remote_db();
 signals:
     bool prepare_rdb_sig(setting_db_info_t db_info);
     bool write_rdb_sig(SkinDatabase::db_info_intf_t intf);
     bool close_rdb_sig();
+
+private:
+    QThread m_rdb_thread;
 };
 
 /*sqlerr must be of type QSqlError*/

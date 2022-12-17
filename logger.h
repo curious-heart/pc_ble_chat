@@ -42,10 +42,19 @@ extern LogSigEmitter *g_LogSigEmitter;
  * After start_log_thread is invoked with a QThread instance can DIY_LOG work.
  * Note: the life-cycle of th must expands to the whole thread.
  * E.g. you can define a QThread obj in main function, and call start/end_log_thread
- * with that obj.
+ * with that obj, as below:
+ *
+    QThread log_thread;
+    start_log_thread(log_thread);
+    ....
+    end_log_thread(log_thread);
+ *
+ * start_log_thread should be invoked as early as possible and end_log_thread
+ * should be invoked as late as possible. Place them at proper position in your
+ * program.
  *
 */
-void start_log_thread(QThread &th);
+bool start_log_thread(QThread &th);
 void end_log_thread(QThread &th);
 
 /*

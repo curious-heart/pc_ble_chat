@@ -76,17 +76,8 @@ void Logger::receive_log(LOG_LEVEL level, QString loc_str, QString log_str)
     writeLog(level_str, loc_str, log_str);
 }
 
-void start_log_thread(QThread &th)
+bool start_log_thread(QThread &th)
 {
-    if(g_LogSigEmitter)
-    {
-        delete g_LogSigEmitter;
-    }
-    if(g_LogWorker)
-    {
-        delete g_LogWorker;
-    }
-
     g_LogSigEmitter = new LogSigEmitter;
     g_LogWorker = new Logger;
     if(g_LogSigEmitter && g_LogWorker)
@@ -97,23 +88,30 @@ void start_log_thread(QThread &th)
                          g_LogWorker , &Logger::receive_log,
                          Qt::QueuedConnection);
         th.start();
+        return true;
+    }
+    else
+    {
+        return false;
     }
 }
 void end_log_thread(QThread &th)
 {
+    /*
+     * emitter is managed by main thread,
+     * and worker is managed by log thread (th).
+    */
     if(g_LogSigEmitter && g_LogWorker)
     {
         QObject::disconnect(g_LogSigEmitter, &LogSigEmitter::record_log,
                          g_LogWorker , &Logger::receive_log);
-
-        delete g_LogSigEmitter; g_LogSigEmitter = nullptr;
-        delete g_LogWorker; g_LogWorker = nullptr;
         th.quit();
         th.wait();
+        g_LogWorker = nullptr;
+        delete g_LogSigEmitter; g_LogSigEmitter = nullptr;
     }
-    if(g_LogSigEmitter && g_LogWorker)
+    if(g_LogSigEmitter)
     {
-        delete g_LogSigEmitter;
-        delete g_LogWorker;
+        delete g_LogSigEmitter; g_LogSigEmitter = nullptr;
     }
 }

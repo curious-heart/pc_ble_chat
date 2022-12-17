@@ -174,7 +174,7 @@ private:
     bool m_only_rec_valid_data = true;
     QString m_curr_file_bn_str = "";
     light_list_t::Iterator m_curr_light_no; /* used to traverse light_list.*/
-    SkinDatabase m_skin_db;
+    SkinDatabase *m_skin_db = nullptr;
     SkinDatabase::db_info_intf_t m_db_data;
 
     QTimer m_write_wait_resp_timer;
@@ -198,9 +198,7 @@ private:
 
     sw_settings_t m_sw_settings;
 
-    QThread m_rdb_thread;
-    SqlDbRemoteWorker *m_rdb_worker = nullptr;
-
+    QThread m_log_thread;
 public:
 };
 //! [declaration]

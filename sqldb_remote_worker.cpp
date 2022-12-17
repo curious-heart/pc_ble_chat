@@ -5,10 +5,15 @@
 #define REMOTE_DB_CONN_NAME QString("remote_mysql_conntection")
 
 SqlDbRemoteWorker::SqlDbRemoteWorker()
-{}
+{
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "+++++++++SqlDbRemoteWorker constructor in thread: %u",
+            (quint64)(QThread::currentThreadId()));
+}
 
 SqlDbRemoteWorker::~SqlDbRemoteWorker()
 {
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "----------SqlDbRemoteWorker destructor in thread: %u",
+            (quint64)(QThread::currentThreadId()));
     if(m_remote_db_ready)
     {
         remove_qt_sqldb_conn(REMOTE_DB_CONN_NAME);
@@ -18,6 +23,8 @@ SqlDbRemoteWorker::~SqlDbRemoteWorker()
 
 bool SqlDbRemoteWorker::prepare_rdb(setting_db_info_t db_info)
 {
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "...............prepare_rdb in thread: %u",
+            (quint64)(QThread::currentThreadId()));
     if(!m_remote_db_ready)
     {
         while(true)
@@ -110,5 +117,7 @@ bool SqlDbRemoteWorker::close_rdb()
         m_remote_db_ready = false;
         emit remote_db_closed();
     }
+    DIY_LOG(LOG_LEVEL::LOG_INFO, ".............. remote db is closed in thread: %u",
+            (quint64)(QThread::currentThreadId()));
     return true;
 }

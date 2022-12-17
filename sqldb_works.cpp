@@ -1,6 +1,7 @@
 #include <QSqlQuery>
 #include <QSqlError>
 #include <QStringEncoder>
+#include "sqldb_remote_worker.h"
 #include "sqldb_works.h"
 #include "logger.h"
 
@@ -299,9 +300,50 @@ typedef struct
     QString force_upd_clau;
     bool changed;
 }tv_name_cmd_map_t;
-
-SkinDatabase::SkinDatabase()
+/*
+ * All dabase related work, including management of the thread in charge of
+ * remote db, are implemented in this class. The life cycle of this class instance
+ * is controlled by upper object (chat for this programm).
+*/
+SkinDatabase::SkinDatabase(setting_db_info_t * rdb_info)
 {
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "+++++++SkinDatabase constructor in thread: %u",
+            (quint64)(QThread::currentThreadId()));
+
+    set_remote_db_info(rdb_info);
+    if(rdb_info)
+    {
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "Try to start a thread for remote db store.");
+
+        SqlDbRemoteWorker *rdb_worker = nullptr;
+        rdb_worker = new SqlDbRemoteWorker;
+        if(nullptr == rdb_worker)
+        {
+            set_remote_db_info(nullptr);
+            DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                    "New SqlDbRemoteWorker error!"
+                    "So thread for remote db store cant' be created.");
+        }
+        else
+        {
+            rdb_worker->moveToThread(&m_rdb_thread);
+            connect(&m_rdb_thread, &QThread::finished,
+                    rdb_worker, &QObject::deleteLater);
+            connect(this, &SkinDatabase::prepare_rdb_sig,
+                    rdb_worker, &SqlDbRemoteWorker::prepare_rdb);
+            connect(this, &SkinDatabase::write_rdb_sig,
+                    rdb_worker, &SqlDbRemoteWorker::write_rdb);
+            connect(this, &SkinDatabase::close_rdb_sig,
+                    rdb_worker, &SqlDbRemoteWorker::close_rdb);
+            m_rdb_thread.start();
+            DIY_LOG(LOG_LEVEL::LOG_INFO, "New thead for remote db store started.");
+        }
+    }
+    else
+    {
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "rdb_info null, no need to use remote db.");
+    }
+
     /*
     QStringList dl = QSqlDatabase::drivers();
     QString ds = dl.join(QString("\n"));
@@ -319,6 +361,9 @@ SkinDatabase::SkinDatabase()
 }
 SkinDatabase::~SkinDatabase()
 {
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "------SkinDatabase destructor in thread: %u",
+            (quint64)(QThread::currentThreadId()));
+
     m_intf.lambda_data.clear();
     if(m_local_db_ready)
     {
@@ -332,8 +377,13 @@ SkinDatabase::~SkinDatabase()
     }
     if(m_remote_db_info)
     {
-        close_remote_db();
         m_remote_db_info = nullptr;
+
+        emit close_rdb_sig();
+        DIY_LOG(LOG_LEVEL::LOG_INFO, ".............. close remote db.");
+        m_rdb_thread.quit();
+        m_rdb_thread.wait();
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "quit remote db thread.");
     }
 }
 
@@ -664,10 +714,7 @@ bool SkinDatabase::write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
 {
     return write_db(qdb, intf, SkinDatabase::REMOTE, db_type);
 }
- void SkinDatabase::close_remote_db()
-{
-     emit close_rdb_sig();
- }
+
 ////////////////////////////////////////////////////////////////
 void remove_qt_sqldb_conn(QString conn_name)
 {
