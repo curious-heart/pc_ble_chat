@@ -71,7 +71,7 @@ static bool check_setting_device_info(setting_ble_dev_info_t &dev_info)
     return ret;
 }
 
-static bool check_setting_db_info(setting_db_info_t &db_info)
+static bool check_setting_db_info(setting_rdb_info_t &db_info)
 {
     bool ret = true;
     if(db_info.srvr_addr.isEmpty()|| (0 == db_info.srvr_port)

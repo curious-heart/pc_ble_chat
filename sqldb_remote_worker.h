@@ -17,7 +17,7 @@ public:
 private:
     bool m_remote_db_ready = false;
 public slots:
-    bool prepare_rdb(setting_db_info_t db_info);
+    bool prepare_rdb(setting_rdb_info_t db_info);
     bool write_rdb(SkinDatabase::db_info_intf_t intf);
     bool close_rdb();
 

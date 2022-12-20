@@ -63,6 +63,7 @@
 #include <QProcess>
 #include <QDomDocument>
 #include <QList>
+#include <QCloseEvent>
 
 #include "sw_setting_parse.h"
 #include "sqldb_works.h"
@@ -130,6 +131,8 @@ private slots:
     void on_manualCmdBtn_clicked();
 
     void on_sendText_textEdited(const QString &arg1);
+
+    void on_quitButton_clicked();
 
 private:
     int adapterFromUserSelection() const;
@@ -199,6 +202,8 @@ private:
     sw_settings_t m_sw_settings;
 
     QThread m_log_thread;
-public:
+
+protected:
+    void closeEvent(QCloseEvent * event);
 };
 //! [declaration]

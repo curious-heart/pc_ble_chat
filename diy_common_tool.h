@@ -15,7 +15,7 @@ bool mkpth_if_not_exists(QString &pth_str);
 
 #define DIY_SIZE_OF_ARRAY(arr) (sizeof(arr)/sizeof((arr)[0]))
 
-typedef class _db_info_t
+typedef class _rdb_info_t
 {
 public:
     bool valid;
@@ -24,11 +24,11 @@ public:
     QString db_name, login_id, login_pwd;
     QString dbms_name, dbms_ver;
 
-    _db_info_t()
+    _rdb_info_t()
     {
         clear();
     }
-    ~_db_info_t()
+    ~_rdb_info_t()
     {
         clear();
     }
@@ -39,5 +39,5 @@ public:
         valid = false;
     }
     QString log_print(bool dbg = true);
-}setting_db_info_t;
+}setting_rdb_info_t;
 #endif // DIY_COMMON_TOOL_H

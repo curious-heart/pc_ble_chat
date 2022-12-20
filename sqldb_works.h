@@ -21,7 +21,7 @@ class SkinDatabase:public QObject
     Q_OBJECT
 
 private:
-    setting_db_info_t *m_remote_db_info = nullptr;
+    setting_rdb_info_t *m_remote_db_info = nullptr;
 
     QString m_local_db_pth_str, m_local_csv_pth_str;
     QString m_local_db_name_str, m_local_csv_name_str;
@@ -77,18 +77,19 @@ private:
     static bool write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                          db_pos_t db_pos, db_type_t db_type);
 public:
-    SkinDatabase(setting_db_info_t * rdb_info = nullptr);
+    SkinDatabase(setting_rdb_info_t * rdb_info = nullptr);
     ~SkinDatabase();
 
-    void set_remote_db_info(setting_db_info_t * db_info);
+    void set_remote_db_info(setting_rdb_info_t * db_info);
     void set_local_store_pth_str(QString db, QString csv);
     bool store_these_info(db_info_intf_t &info);
     static bool create_tbls_and_views(QSqlDatabase &qdb,
                                       db_pos_t db_pos, db_type_t db_type);
     static bool write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                                 db_type_t db_type);
+    void close_dbs();
 signals:
-    bool prepare_rdb_sig(setting_db_info_t db_info);
+    bool prepare_rdb_sig(setting_rdb_info_t rdb_info);
     bool write_rdb_sig(SkinDatabase::db_info_intf_t intf);
     bool close_rdb_sig();
 

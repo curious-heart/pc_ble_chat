@@ -305,7 +305,7 @@ typedef struct
  * remote db, are implemented in this class. The life cycle of this class instance
  * is controlled by upper object (chat for this programm).
 */
-SkinDatabase::SkinDatabase(setting_db_info_t * rdb_info)
+SkinDatabase::SkinDatabase(setting_rdb_info_t * rdb_info)
 {
     DIY_LOG(LOG_LEVEL::LOG_INFO, "+++++++SkinDatabase constructor in thread: %u",
             (quint64)(QThread::currentThreadId()));
@@ -379,15 +379,13 @@ SkinDatabase::~SkinDatabase()
     {
         m_remote_db_info = nullptr;
 
-        emit close_rdb_sig();
-        DIY_LOG(LOG_LEVEL::LOG_INFO, ".............. close remote db.");
         m_rdb_thread.quit();
         m_rdb_thread.wait();
         DIY_LOG(LOG_LEVEL::LOG_INFO, "quit remote db thread.");
     }
 }
 
-void SkinDatabase::set_remote_db_info(setting_db_info_t * db_info)
+void SkinDatabase::set_remote_db_info(setting_rdb_info_t * db_info)
 {
     m_remote_db_info = db_info;
 }
@@ -681,6 +679,9 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
             local_db = QSqlDatabase::database(LOCAL_DB_CONN_NAME);
             ret = write_local_db(local_db, m_intf, SkinDatabase::DB_SQLITE);
             local_db.close();
+            DIY_LOG(LOG_LEVEL::LOG_INFO, "remove db conn %ls in thread: %u",
+                    LOCAL_DB_CONN_NAME.utf16(),
+                    (quint64)(QThread::currentThreadId()));
         }
         QSqlDatabase::removeDatabase(LOCAL_DB_CONN_NAME);
     }
@@ -715,16 +716,20 @@ bool SkinDatabase::write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
     return write_db(qdb, intf, SkinDatabase::REMOTE, db_type);
 }
 
+void SkinDatabase::close_dbs()
+{
+    emit close_rdb_sig();
+}
 ////////////////////////////////////////////////////////////////
 void remove_qt_sqldb_conn(QString conn_name)
 {
-    DIY_LOG(LOG_LEVEL::LOG_INFO, "remove db conn %ls in thread: %u",
-            conn_name.utf16(),
-            (quint64)(QThread::currentThreadId()));
     {
         QSqlDatabase local_db;
         local_db = QSqlDatabase::database(conn_name);
         local_db.close();
     }
     QSqlDatabase::removeDatabase(conn_name);
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "remove db conn %ls in thread: %u",
+            conn_name.utf16(),
+            (quint64)(QThread::currentThreadId()));
 }

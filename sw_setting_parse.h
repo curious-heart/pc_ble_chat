@@ -98,7 +98,7 @@ typedef class _sw_settings_t
 {
 public:
     QMap<QString, setting_ble_dev_info_t*> ble_dev_list;
-    setting_db_info_t db_info;
+    setting_rdb_info_t db_info;
     setting_oth_t oth_settings;
 
     _sw_settings_t()

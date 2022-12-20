@@ -172,7 +172,7 @@ quint8 diy_crc8_8210(const QByteArray &data, int len)
 }
 
 /*Begin:setting_db_info_t member function definition.*/
-QString setting_db_info_t::log_print(bool dbg)
+QString setting_rdb_info_t::log_print(bool dbg)
 {
     QString str;
     str +=  QString("db_info srvr_addr:%1,").arg(srvr_addr)

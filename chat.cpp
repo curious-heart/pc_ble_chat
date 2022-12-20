@@ -222,7 +222,6 @@ Chat::~Chat()
     if(m_skin_db)
     {
         delete m_skin_db;
-        DIY_LOG(LOG_LEVEL::LOG_INFO,"~~~~~~~m_skin_db deleted~~~~~~");
     }
 
     end_log_thread(m_log_thread);
@@ -1128,3 +1127,22 @@ void Chat::on_sendText_textEdited(const QString &/*arg1*/)
         set_manual_cmd_btn();
     }
 }
+
+void Chat::on_quitButton_clicked()
+{
+    if(m_skin_db)
+    {
+        m_skin_db->close_dbs();
+    }
+}
+
+void Chat::closeEvent(QCloseEvent *event)
+{
+    if(m_skin_db)
+    {
+        m_skin_db->close_dbs();
+    }
+    event->accept();
+}
+
+

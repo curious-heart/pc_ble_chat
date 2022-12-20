@@ -21,7 +21,7 @@ SqlDbRemoteWorker::~SqlDbRemoteWorker()
     }
 }
 
-bool SqlDbRemoteWorker::prepare_rdb(setting_db_info_t db_info)
+bool SqlDbRemoteWorker::prepare_rdb(setting_rdb_info_t db_info)
 {
     DIY_LOG(LOG_LEVEL::LOG_INFO, "...............prepare_rdb in thread: %u",
             (quint64)(QThread::currentThreadId()));
