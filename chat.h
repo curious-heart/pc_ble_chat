@@ -179,6 +179,11 @@ private:
     light_list_t::Iterator m_curr_light_no; /* used to traverse light_list.*/
     SkinDatabase *m_skin_db = nullptr;
     SkinDatabase::db_info_intf_t m_db_data;
+    /*records that to be stored in remote db but failed are stored here,
+     * so that later user can stored them into remote db manually.
+     */
+    const char* m_safe_ldb_for_rdb_dir_rel_name ="safe_ldb_for_rdb";
+    const char* m_safe_ldb_for_rdb_rel_name = "safe_ldb_for_rdb.sqlite";
 
     QTimer m_write_wait_resp_timer;
     QTimer m_write_done_timer;

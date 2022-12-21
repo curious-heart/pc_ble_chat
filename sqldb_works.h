@@ -67,29 +67,50 @@ public:
     }db_type_t;
 private:
     db_info_intf_t m_intf;
+    QString m_safe_ldb_dir_str = "";
+    QString m_safe_ldb_file_str = "";
     bool prepare_local_db();
-    bool write_local_db(QSqlDatabase &qdb, db_info_intf_t &intf, db_type_t db_type);
 
     QFile m_local_csv_f;
     bool prepare_local_csv();
     bool write_local_csv(db_info_intf_t &intf);
 
-    static bool write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
-                         db_pos_t db_pos, db_type_t db_type);
 public:
     SkinDatabase(setting_rdb_info_t * rdb_info = nullptr);
     ~SkinDatabase();
 
     void set_remote_db_info(setting_rdb_info_t * db_info);
+    void set_safe_ldb_for_rdb_fpn(QString safe_ldb_dir, QString safe_ldb_file);
     void set_local_store_pth_str(QString db, QString csv);
     bool store_these_info(db_info_intf_t &info);
     static bool create_tbls_and_views(QSqlDatabase &qdb,
                                       db_pos_t db_pos, db_type_t db_type);
     static bool write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
-                                db_type_t db_type);
+                                db_type_t db_type,
+                                QString safe_ldb_pth_str, QString safe_ldb_name_str,
+                                QString safe_ldb_conn_name_str,
+                                bool &safe_ldb_ready);
+    static bool write_local_db(QSqlDatabase &qdb, db_info_intf_t &intf, db_type_t db_type);
+    /*
+     * This write_db may be called from multi thread simultaneous.
+     * When the db_pos is REMOTE, the last 4 parameters should be assigned
+     * to proper value.
+    */
+    static bool write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
+                         db_pos_t db_pos, db_type_t db_type,
+                         QString safe_ldb_pth_str = "", QString safe_ldb_name_str = "",
+                         QString safe_ldb_conn_name_str = "",
+                         bool *safe_ldb_ready = nullptr);
+    static bool prepare_safe_ldb(QString pth, QString name, QString tbl_name,
+                                    QString safe_ldb_conn_name_str = "");
+    static bool db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
+                                   quint32 error_code,
+                                   QString tbl_name, QString cmd, db_type_t db_type);
     void close_dbs();
 signals:
-    bool prepare_rdb_sig(setting_rdb_info_t rdb_info);
+    bool prepare_rdb_sig(setting_rdb_info_t rdb_info,
+                         QString safe_ldb_dir_str,
+                         QString safe_ldb_file_str);
     bool write_rdb_sig(SkinDatabase::db_info_intf_t intf);
     bool close_rdb_sig();
 

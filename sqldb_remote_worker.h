@@ -1,9 +1,6 @@
 #ifndef SQLDB_REMOTE_WORKER_H
 #define SQLDB_REMOTE_WORKER_H
 
-#include <QObject>
-#include <QSqlDatabase>
-
 #include "diy_common_tool.h"
 #include "sqldb_works.h"
 
@@ -16,8 +13,12 @@ public:
 
 private:
     bool m_remote_db_ready = false;
+    QString m_safe_ldb_dir_str = "", m_safe_ldb_file_str = "";
+    bool m_safe_ldb_ready = false;
+
 public slots:
-    bool prepare_rdb(setting_rdb_info_t db_info);
+    bool prepare_rdb(setting_rdb_info_t db_info, QString safe_ldb_dir_str,
+                                        QString safe_ldb_file_str);
     bool write_rdb(SkinDatabase::db_info_intf_t intf);
     bool close_rdb();
 

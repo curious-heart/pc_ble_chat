@@ -4,6 +4,7 @@
 #include "sqldb_remote_worker.h"
 #include "sqldb_works.h"
 #include "logger.h"
+#include "diy_common_tool.h"
 
 #define LOCAL_DB_CONN_NAME QString("local_sqlite_conntection")
 /*
@@ -15,6 +16,15 @@
 */
 #define SQLITE_CONSTRAINT_PRIMARYKEY 1555
 #define SQLITE_CONSTRAINT_UNIQUE 2067
+/*
+ * End.
+*/
+
+/*
+ * Begin: Mysql defines.
+ * Refer to https://dev.mysql.com/doc/mysql-errors/5.7/en/server-error-reference.html#error_er_no_such_table
+*/
+#define MYSQL_ER_DUP_KEY 1022
 /*
  * End.
 */
@@ -37,6 +47,9 @@
 #define m_col_time_str QString("time")
 #define m_col_rec_id_str QString("rec_id")
 #define m_view_datum_str QString("datum_view")
+
+#define _SQLITE_INSERT_UPDATE_CLAU_ QString("ON CONFLICT DO UPDATE SET")
+#define _MYSQL_INSERT_UPDATE_CLAU_  QString("ON DUPLICATE KEY UPDATE")
 
 #define _TBL_EXPTS_COLS_ \
         (m_col_expt_id_str + "," + m_col_desc_str + ","\
@@ -186,12 +199,12 @@ static inline QString _CREATE_VIEW_DATUM_CMD_(SkinDatabase::db_type_t db_t)
  * condition. so we change them to inline functions... */
 /*info must be of type db_info_intf_t*/
 /*
-#define _INSERT_TBL_EXPT_CMD_(info) \
+#define _INSERT_TBL_EXPTS_CMD_(info) \
     (QString("INSERT INTO ") + m_tbl_expts_str + " VALUES "\
      + "(" + "\"" + (info).expt_id + "\"" + "," + "\"" + (info).expt_desc +"\"" + ","\
     + "\"" + (info).expt_date + "\"" + "," + "\"" + (info).expt_time +"\"" + ");")
 */
-static inline QString _INSERT_TBL_EXPT_CMD_(SkinDatabase::db_info_intf_t &info,
+static inline QString _INSERT_TBL_EXPTS_CMD_(SkinDatabase::db_info_intf_t &info,
                                             SkinDatabase::db_type_t /*db_t*/)
 {
     return
@@ -200,11 +213,14 @@ static inline QString _INSERT_TBL_EXPT_CMD_(SkinDatabase::db_info_intf_t &info,
     + "\"" + (info).expt_date + "\"" + "," + "\"" + (info).expt_time +"\"" + ");");
 }
 
-static inline QString _FORCE_UPD_TBL_EXPT_CLAU_(SkinDatabase::db_info_intf_t &info,
-                                                SkinDatabase::db_type_t /*db_t*/)
+static inline QString _FORCE_UPD_TBL_EXPTS_CLAU_(SkinDatabase::db_info_intf_t &info,
+                                                SkinDatabase::db_type_t db_t)
 {
+    QString c = (SkinDatabase::DB_SQLITE == db_t) ?
+                _SQLITE_INSERT_UPDATE_CLAU_ : _MYSQL_INSERT_UPDATE_CLAU_;
     return
-        (m_col_expt_id_str + "=" + "\"" + (info).expt_id + "\"" + ","\
+        c + " "
+        + (m_col_expt_id_str + "=" + "\"" + (info).expt_id + "\"" + ","\
         + m_col_desc_str + "=" + "\"" + (info).expt_desc + "\"" + ","\
         + m_col_date_str + "=" + "\"" + (info).expt_date +"\"" + ","\
         + m_col_time_str + "="  + "\"" + (info).expt_time  + "\"");
@@ -220,10 +236,13 @@ static inline QString _INSERT_TBL_OBJECTS_CMD_(SkinDatabase::db_info_intf_t &inf
      + "\"" + (info).obj_desc + "\"" + ");");
 }
  static inline QString _FORCE_UPD_TBL_OBJECTS_CLAU_(SkinDatabase::db_info_intf_t &info,
-                                                    SkinDatabase::db_type_t /*db_t*/)
+                                                    SkinDatabase::db_type_t db_t)
 {
+    QString c = (SkinDatabase::DB_SQLITE == db_t) ?
+                _SQLITE_INSERT_UPDATE_CLAU_ : _MYSQL_INSERT_UPDATE_CLAU_;
     return
-    (m_col_obj_id_str + "=" + "\"" + (info).obj_id  + "\"" + ","\
+      c + " "
+    + (m_col_obj_id_str + "=" + "\"" + (info).obj_id  + "\"" + ","\
     + m_col_skin_type_str + "=" + "\"" + (info).skin_type + "\"" + ","\
     + m_col_desc_str + "=" + "\"" + (info).obj_desc + "\"");
 }
@@ -238,10 +257,13 @@ static inline QString _INSERT_TBL_DEVICES_CMD_(SkinDatabase::db_info_intf_t &inf
      + "\"" + (info).dev_desc + "\"" + ");");
 }
 static inline QString _FORCE_UPD_TBL_DEVICES_CLAU_(SkinDatabase::db_info_intf_t &info,
-                                                   SkinDatabase::db_type_t /*db_t*/)
+                                                   SkinDatabase::db_type_t db_t)
 {
+    QString c = (SkinDatabase::DB_SQLITE == db_t) ?
+                _SQLITE_INSERT_UPDATE_CLAU_ : _MYSQL_INSERT_UPDATE_CLAU_;
     return
-        (m_col_dev_id_str + "=" + "\"" + (info).dev_id + "\"" + ","\
+        c + " "
+        + (m_col_dev_id_str + "=" + "\"" + (info).dev_id + "\"" + ","\
         + m_col_dev_addr_str + "=" + "\"" + (info).dev_addr + "\"" + ","\
         + m_col_desc_str + "=" + "\"" + (info).dev_desc + "\"");
 }
@@ -290,15 +312,12 @@ static inline QString _INSERT_VIEW_DATUM_(SkinDatabase::db_info_intf_t &info,
     + (info).dev_id + ","+ (info).expt_id);
 }
 
-#define _SQLITE_INSERT_UPDATE_CLAU_ QString("ON CONFLICT DO UPDATE SET")
-#define _MYSQL_INSERT_UPDATE_CLAU_  QString("ON DUPLICATE KEY UPDATE")
-
 typedef struct
 {
     QString tv_name;
     QString cmd_str;
-    QString force_upd_clau;
     bool changed;
+    QString aux_cmd_str; //use case: insert rdb with cmd_str fail, try to insert safe ldb.
 }tv_name_cmd_map_t;
 /*
  * All dabase related work, including management of the thread in charge of
@@ -389,6 +408,13 @@ void SkinDatabase::set_remote_db_info(setting_rdb_info_t * db_info)
 {
     m_remote_db_info = db_info;
 }
+
+void SkinDatabase::set_safe_ldb_for_rdb_fpn(QString safe_ldb_dir, QString safe_ldb_file)
+{
+    m_safe_ldb_dir_str = safe_ldb_dir;
+    m_safe_ldb_file_str = safe_ldb_file;
+}
+
 void SkinDatabase::set_local_store_pth_str(QString db, QString csv)
 {
     m_local_db_pth_str = db;
@@ -443,8 +469,10 @@ bool SkinDatabase::prepare_local_db()
             {
                 sql_err = local_db.lastError();
                 sqlerr_str = SQL_LAST_ERR_STR(sql_err);
-                DIY_LOG(LOG_LEVEL::LOG_ERROR, "addDatabase QSQLITE error!\n%ls",
-                        sqlerr_str.utf16());
+                DIY_LOG(LOG_LEVEL::LOG_ERROR, "addDatabase QSQLITE error!"
+                                              "conntion name: %ls\n%ls",
+                                              LOCAL_DB_CONN_NAME.utf16(),
+                                              sqlerr_str.utf16());
                 m_local_db_ready = false;
                 break;
             }
@@ -452,7 +480,7 @@ bool SkinDatabase::prepare_local_db()
             m_local_db_name_str = m_db_name_str + "_" + m_intf.expt_date
                                 + "-" + m_intf.expt_time;
             */
-            m_local_db_name_str = m_db_name_str;
+            m_local_db_name_str = m_db_name_str + ".sqlite";
             m_local_db_name_str.replace(":","");
             QString fpn = m_local_db_pth_str + "/" + m_local_db_name_str;
             local_db.setDatabaseName(fpn);
@@ -493,11 +521,11 @@ bool SkinDatabase::create_tbls_and_views(QSqlDatabase &qdb,
     QString name, cmd;
     tv_name_cmd_map_t create_tv_cmds[] =
     {
-       {m_tbl_expts_str, _CREATE_TBL_EXPTS_CMD_(db_type), "", true},
-       {m_tbl_objects_str, _CREATE_TBL_OBJECTS_CMD_(db_type), "", true},
-       {m_tbl_devices_str, _CREATE_TBL_DEVICES_CMD_(db_type), "", true},
-       {m_tbl_datum_str, _CREATE_TBL_DATUM_CMD_(db_type), "", true},
-       {m_view_datum_str, _CREATE_VIEW_DATUM_CMD_(db_type), "", true},
+       {m_tbl_expts_str, _CREATE_TBL_EXPTS_CMD_(db_type), true, ""},
+       {m_tbl_objects_str, _CREATE_TBL_OBJECTS_CMD_(db_type), true, ""},
+       {m_tbl_devices_str, _CREATE_TBL_DEVICES_CMD_(db_type), true, ""},
+       {m_tbl_datum_str, _CREATE_TBL_DATUM_CMD_(db_type), true, ""},
+       {m_view_datum_str, _CREATE_VIEW_DATUM_CMD_(db_type),  true, ""},
     };
 
     /*Create TABLE and VIEW*/
@@ -522,39 +550,198 @@ bool SkinDatabase::create_tbls_and_views(QSqlDatabase &qdb,
     return ret;
 }
 
+/*
+ * This functon may be invoked from multi threads, so it should be thread safe.
+*/
 bool SkinDatabase::write_local_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                                   db_type_t db_type)
 {
     return write_db(qdb, intf, SkinDatabase::LOCAL, db_type);
 }
 
+/* invoked from remote worker thread.
+ * if prepared ok, return connection name, and the db is opened for use;
+ * else, return an empty str.
+*/
+bool SkinDatabase::prepare_safe_ldb(QString db_pth, QString db_name, QString tbl_name,
+                                    QString safe_ldb_conn_name_str)
+{
+    if(!mkpth_if_not_exists(db_pth))
+    {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Create dir fail:%ls", db_pth.utf16());
+        return false;
+    }
+    QMap<QString, QString> create_tbl_cmds =
+    {
+       {m_tbl_expts_str, _CREATE_TBL_EXPTS_CMD_(DB_SQLITE)},
+       {m_tbl_objects_str, _CREATE_TBL_OBJECTS_CMD_(DB_SQLITE)},
+       {m_tbl_devices_str, _CREATE_TBL_DEVICES_CMD_(DB_SQLITE)},
+       {m_tbl_datum_str, _CREATE_TBL_DATUM_CMD_(DB_SQLITE)},
+    };
+    bool ret = true;
+    while(true)
+    {
+        QSqlError sql_err;
+        QString sqlerr_str;
+        QSqlDatabase local_db;
+
+        local_db = QSqlDatabase::database(safe_ldb_conn_name_str);
+        if(!local_db.isValid())
+        {
+            local_db = QSqlDatabase::addDatabase(QString("QSQLITE"), safe_ldb_conn_name_str);
+        }
+        if(!local_db.isValid())
+        {
+            sql_err = local_db.lastError();
+            sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "addDatabase QSQLITE error!"
+                                          "conntion name: %ls!\n%ls",
+                                          safe_ldb_conn_name_str.utf16(),
+                                          sqlerr_str.utf16());
+            ret = false;
+            break;
+        }
+        if(!local_db.isOpen())
+        {
+            local_db.setDatabaseName(db_pth + "/" + db_name);
+            ret = local_db.open();
+        }
+        if(!ret)
+        {
+            sql_err = local_db.lastError();
+            sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Local db %ls open error!\n%ls",
+                    (db_pth + "/" + db_name).utf16(), sqlerr_str.utf16());
+            break;
+        }
+
+        QList<QString> tbl_name_list;
+        if(tbl_name.isEmpty())
+        {
+            //create all tables.
+            tbl_name_list = create_tbl_cmds.keys();
+        }
+        else
+        {
+            tbl_name_list << tbl_name;
+        }
+        foreach (const QString &tbn, tbl_name_list)
+        {
+            QString cmd = create_tbl_cmds[tbn];
+            QSqlQuery query(local_db);
+            ret = query.exec(cmd);
+            if(!ret)
+            {
+                sql_err = query.lastError();
+                sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+                DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                        "Create table %ls in %ls fail!\nCmd:%ls\n%ls",
+                        tbn.utf16(), local_db.databaseName().utf16(), cmd.utf16(),
+                        sqlerr_str.utf16());
+                break;
+            }
+        }
+
+        break;
+    }
+    return ret;
+}
+
+/*
+ * This functon may be invoked from multi threads, so it should be thread safe.
+*/
+bool SkinDatabase::db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
+                                      quint32 err_code,
+                                      QString tbl_name, QString cmd, db_type_t db_type)
+{
+    QMap<QString, QString> upd_clau_list =
+    {
+       {m_tbl_expts_str, _FORCE_UPD_TBL_EXPTS_CLAU_(intf, db_type)},
+       {m_tbl_objects_str, _FORCE_UPD_TBL_OBJECTS_CLAU_(intf, db_type)},
+       {m_tbl_devices_str, _FORCE_UPD_TBL_DEVICES_CLAU_(intf, db_type)},
+    };
+    QString upd_clau = "";
+    QSqlQuery query(qdb);
+    QSqlError sql_err;
+    QString sqlerr_str;
+    bool dup = false;
+    bool ret = false;
+
+    if(DB_SQLITE == db_type)
+    {
+        if(err_code == SQLITE_CONSTRAINT_PRIMARYKEY || err_code == SQLITE_CONSTRAINT_UNIQUE)
+        {
+            dup = true;
+        }
+    }
+    else
+    {//assuming mysql
+        if(err_code == MYSQL_ER_DUP_KEY)
+        {
+            dup = true;
+        }
+    }
+    if(dup)
+    {
+        upd_clau = upd_clau_list[tbl_name];
+        if(upd_clau.isEmpty())
+        {
+            DIY_LOG(LOG_LEVEL::LOG_INFO,
+                    "Insert but duplicate,cmd:%ls\n"
+                    "And, this table has no update clause, so can't insert!",
+                    cmd.utf16());
+            return false;
+        }
+        DIY_LOG(LOG_LEVEL::LOG_INFO,
+                "Insert but duplicate,cmd:%ls\nNow try updating!", cmd.utf16());
+        /*update*/
+        cmd.remove(";");
+        cmd += " " +  upd_clau + ";";
+        ret = query.exec(cmd);
+        if(!ret)
+        {
+            sql_err = query.lastError();
+            sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+            DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                    "Update table %ls fail!!!\n"
+                    "Cmd:%ls\n%ls",
+                   tbl_name.utf16(), cmd.utf16(), sqlerr_str.utf16());
+        }
+    }
+    else
+    {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                "Insert table %ls fail!!!\n"
+                "Cmd:%ls\n%ls",
+               tbl_name.utf16(), cmd.utf16(), sqlerr_str.utf16());
+    }
+    return ret;
+}
 /*
  * This functon may be invoked from multi threads, so it should be thread safe.
 */
 bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
-                            db_pos_t /*db_pos*/, db_type_t db_type)
+                            db_pos_t db_pos, db_type_t db_type,
+                            QString safe_ldb_pth_str, QString safe_ldb_name_str,
+                            QString safe_ldb_conn_name_str,
+                            bool *safe_ldb_ready)
 {
     QSqlQuery query(qdb);
     QSqlError sql_err;
     QString sqlerr_str;
     QString name, cmd;
-    bool ret;
+    bool ret = true;
+    bool safe_ldb_prepared = safe_ldb_ready ? (*safe_ldb_ready) : false; //only used in case of db_pos being REMOTE
 
     tv_name_cmd_map_t insert_tbl_cmds[] =
     {
-       {m_tbl_expts_str,
-            _INSERT_TBL_EXPT_CMD_(intf, db_type),
-            _FORCE_UPD_TBL_EXPT_CLAU_(intf, db_type),
-            intf.expt_changed},
-       {m_tbl_objects_str,
-            _INSERT_TBL_OBJECTS_CMD_(intf, db_type),
-            _FORCE_UPD_TBL_OBJECTS_CLAU_(intf, db_type),
-            intf.obj_changed},
-       {m_tbl_devices_str,
-            _INSERT_TBL_DEVICES_CMD_(intf, db_type),
-            _FORCE_UPD_TBL_DEVICES_CLAU_(intf, db_type),
-            intf.dev_changed},
-       {m_tbl_datum_str, "", "", true},
+       {m_tbl_expts_str, _INSERT_TBL_EXPTS_CMD_(intf, db_type), intf.expt_changed,
+        (REMOTE == db_pos) ? _INSERT_TBL_EXPTS_CMD_(intf, DB_SQLITE) : ""},
+       {m_tbl_objects_str, _INSERT_TBL_OBJECTS_CMD_(intf, db_type), intf.obj_changed,
+        (REMOTE == db_pos) ? _INSERT_TBL_OBJECTS_CMD_(intf, DB_SQLITE) : ""},
+       {m_tbl_devices_str, _INSERT_TBL_DEVICES_CMD_(intf, db_type), intf.dev_changed,
+        (REMOTE == db_pos) ? _INSERT_TBL_DEVICES_CMD_(intf, DB_SQLITE) : ""},
+       {m_tbl_datum_str, "", true},
     };
 
     int idx = 0, d_idx = 0;
@@ -572,10 +759,38 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                     sql_err = query.lastError();
                     sqlerr_str = SQL_LAST_ERR_STR(sql_err);
                     DIY_LOG(LOG_LEVEL::LOG_ERROR,
-                            "Insert table %ls fail, stop!!!\n"
+                            "Insert table %ls fail!!!\n"
                             "Cmd:%ls\n%ls",
                            name.utf16(), cmd.utf16(),sqlerr_str.utf16());
-                    return false;
+                    if(REMOTE == db_pos)
+                    {
+                        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Insert remote db error."
+                                "Now record it in local safe db.");
+                        if(!safe_ldb_prepared )
+                        {
+                            safe_ldb_prepared = prepare_safe_ldb(safe_ldb_pth_str,
+                                                         safe_ldb_name_str,
+                                                         name);
+                        }
+
+                        if(safe_ldb_prepared)
+                        {
+                            cmd = _INSERT_TBL_DATUM_CMD_(intf, d_idx, DB_SQLITE);
+                            QSqlDatabase safe_ldb
+                                    = QSqlDatabase::database(safe_ldb_conn_name_str);
+                            QSqlQuery safe_ldb_q(safe_ldb);
+                            ret = safe_ldb_q.exec(cmd);
+                            if(!ret)
+                            {
+                                 sql_err = safe_ldb_q.lastError();
+                                 sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+                                 DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                                         "Insert safe ldb table %ls fail!!!\n"
+                                         "Cmd:%ls\n%ls",
+                                        name.utf16(), cmd.utf16(),sqlerr_str.utf16());
+                            }
+                        }
+                    }
                 }
                 ++d_idx;
             }
@@ -591,45 +806,56 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                 sql_err = query.lastError();
                 sqlerr_str = SQL_LAST_ERR_STR(sql_err);
                 quint32 err_code = sql_err.nativeErrorCode().toUInt();
-                if(err_code == SQLITE_CONSTRAINT_PRIMARYKEY
-                        || err_code == SQLITE_CONSTRAINT_UNIQUE)
+                /*
+                 * ret = ins_err_process(remote_mysql)
+                 * if(!ret && remote)
+                 *      ret = ins_safe_ldb
+                 *      if(!ret)
+                 *          ins_err_process(local_sqlite)
+                */
+                ret = db_ins_err_process(qdb, intf, err_code, name, cmd, db_type);
+                if(!ret && (REMOTE == db_pos))
                 {
-                    DIY_LOG(LOG_LEVEL::LOG_INFO,
-                            "Inser duplicate,cmd:%ls\nNow update!", cmd.utf16());
-                    /*update*/
-                    cmd.remove(";");
-                    cmd += " " + _SQLITE_INSERT_UPDATE_CLAU_ + " "
-                            + insert_tbl_cmds[idx].force_upd_clau + ";";
-                    ret = query.exec(cmd);
-                    if(!ret)
+                    DIY_LOG(LOG_LEVEL::LOG_ERROR, "Insert remote db error."
+                            "Now record it in local safe db.");
+                    if(!safe_ldb_prepared )
                     {
-                        sql_err = query.lastError();
-                        sqlerr_str = SQL_LAST_ERR_STR(sql_err);
-                        DIY_LOG(LOG_LEVEL::LOG_ERROR,
-                                "Update table %ls fail, stop!!!\n"
-                                "Cmd:%ls\n%ls",
-                               name.utf16(), cmd.utf16(), sqlerr_str.utf16());
-                        return false;
+                        safe_ldb_prepared = prepare_safe_ldb(safe_ldb_pth_str,
+                                                             safe_ldb_name_str,
+                                                             name);
                     }
-                    else
+
+                    if(safe_ldb_prepared)
                     {
-                        ++idx;
-                        continue;
+                        QSqlDatabase safe_ldb
+                                = QSqlDatabase::database(safe_ldb_conn_name_str);
+                        QSqlQuery safe_ldb_q(safe_ldb);
+                        cmd = insert_tbl_cmds[idx].aux_cmd_str;
+                        ret = query.exec(cmd);
+                        if(!ret)
+                        {
+                            sql_err = safe_ldb_q.lastError();
+                            sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+                            err_code = sql_err.nativeErrorCode().toUInt();
+                            ret = db_ins_err_process(safe_ldb, intf, err_code,
+                                                     name, cmd, db_type);
+                            if(!ret)
+                            {
+                                DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                                        "Trying to insert safe ldb error!!!");
+                            }
+                        }
                     }
-                }
-                else
-                {
-                    DIY_LOG(LOG_LEVEL::LOG_ERROR,
-                            "Insert table %ls fail, stop!!!\n"
-                            "Cmd:%ls\n%ls",
-                           name.utf16(), cmd.utf16(), sqlerr_str.utf16());
-                    return false;
                 }
             }
         }
         ++idx;
     }
-    return true;
+    if(safe_ldb_ready)
+    {
+        *safe_ldb_ready = safe_ldb_prepared;
+    }
+    return ret;
 }
 
 bool SkinDatabase::write_local_csv(db_info_intf_t &intf)
@@ -700,24 +926,29 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
 
     if(m_remote_db_info)
     {
-        emit prepare_rdb_sig(*m_remote_db_info);
+        emit prepare_rdb_sig(*m_remote_db_info, m_safe_ldb_dir_str, m_safe_ldb_file_str);
         emit write_rdb_sig(m_intf);
     }
 
     return ret && ret2;
 }
 
-/*
- * This functon may be invoked from multi threads, so it should be thread safe.
-*/
+/*invoked from remote worker thread.*/
 bool SkinDatabase::write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
-                                   db_type_t db_type)
+                                   db_type_t db_type, QString safe_ldb_pth_str,
+                                   QString safe_ldb_name_str,
+                                   QString safe_ldb_conn_name_str, bool &safe_ldb_ready)
 {
-    return write_db(qdb, intf, SkinDatabase::REMOTE, db_type);
+    return write_db(qdb, intf, REMOTE, db_type,
+                    safe_ldb_pth_str, safe_ldb_name_str,
+                    safe_ldb_conn_name_str,&safe_ldb_ready);
 }
 
 void SkinDatabase::close_dbs()
 {
+    /* This function informs remote-worker thread to close its dbs.
+     * Local db is closed in destructor.
+    */
     emit close_rdb_sig();
 }
 ////////////////////////////////////////////////////////////////

@@ -127,10 +127,16 @@ Chat::Chat(QWidget *parent)
     {
         m_skin_db = new SkinDatabase(nullptr);
     }
+
     if(!m_skin_db)
     {
         DIY_LOG(LOG_LEVEL::LOG_ERROR,
                 "New SkinDatabase error, so all db and csv store can't be taken.");
+    }
+    else if(m_sw_settings.oth_settings.use_remote_db)
+    {
+        m_skin_db->set_safe_ldb_for_rdb_fpn(QString("../") + m_safe_ldb_for_rdb_dir_rel_name,
+                                            m_safe_ldb_for_rdb_rel_name);
     }
 
     connect(&m_write_wait_resp_timer, &QTimer::timeout,
@@ -985,6 +991,14 @@ void Chat::on_choosePathButton_clicked()
         m_csv_pth_str = m_data_pth_str  + "/" + QString(m_csv_dir_rel_name);
         m_local_db_pth_str = m_data_pth_str + "/" + QString(m_local_db_dir_rel_name);
         m_dir_ready = false;
+
+        if(m_sw_settings.oth_settings.use_remote_db && m_skin_db)
+        {
+            m_skin_db->set_safe_ldb_for_rdb_fpn(m_data_pth_str + "/"
+                                              + m_safe_ldb_for_rdb_dir_rel_name,
+                                                m_safe_ldb_for_rdb_rel_name);
+
+        }
     }
     ui->storePathDisplay->setText(m_data_pth_str);
     qDebug() << "存储位置：" << directory;
