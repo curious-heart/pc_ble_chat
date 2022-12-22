@@ -142,18 +142,24 @@ bool SqlDbRemoteWorker::write_rdb(SkinDatabase::db_info_intf_t intf)
     return ret;
 }
 
-bool SqlDbRemoteWorker::close_rdb()
+bool SqlDbRemoteWorker::close_rdb(SkinDatabase::db_ind_t db_ind)
 {
-    if(m_remote_db_ready)
+    if(db_ind & SkinDatabase::DB_REMOTE)
     {
-        remove_qt_sqldb_conn(REMOTE_DB_CONN_NAME);
-        m_remote_db_ready = false;
-        emit remote_db_closed();
+        if(m_remote_db_ready)
+        {
+            remove_qt_sqldb_conn(REMOTE_DB_CONN_NAME);
+            m_remote_db_ready = false;
+            emit remote_db_closed();
+        }
+        DIY_LOG(LOG_LEVEL::LOG_INFO, ".............. remote db is closed in thread: %u",
+                (quint64)(QThread::currentThreadId()));
     }
-    DIY_LOG(LOG_LEVEL::LOG_INFO, ".............. remote db is closed in thread: %u",
-            (quint64)(QThread::currentThreadId()));
 
-    remove_qt_sqldb_conn(SAFE_LOCAL_DB_CONN_NAME);
+    if(db_ind & SkinDatabase::DB_SAFE_LDB)
+    {
+        remove_qt_sqldb_conn(SAFE_LOCAL_DB_CONN_NAME);
+    }
 
     return true;
 }

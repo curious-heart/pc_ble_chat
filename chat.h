@@ -160,7 +160,6 @@ private:
     const char* m_txt_dir_rel_name = "txt";
     const char* m_csv_dir_rel_name = "csv";
     const char* m_local_db_dir_rel_name = "local_db";
-    const char* m_local_dbview_file_rel_name = "datum_view.csv"; /*all valid file are merged into here.*/
     const char* m_all_rec_file_name_apx = "_all";
     QString m_data_pth_str; /*the "root" path to store received data.*/
     QString m_all_rec_pth_str; /*all received data are stored here.*/

@@ -406,19 +406,32 @@ SkinDatabase::~SkinDatabase()
 
 void SkinDatabase::set_remote_db_info(setting_rdb_info_t * db_info)
 {
+    close_dbs(SkinDatabase::DB_REMOTE);
     m_remote_db_info = db_info;
 }
 
 void SkinDatabase::set_safe_ldb_for_rdb_fpn(QString safe_ldb_dir, QString safe_ldb_file)
 {
+    emit close_rdb_sig(SkinDatabase::DB_SAFE_LDB);
     m_safe_ldb_dir_str = safe_ldb_dir;
     m_safe_ldb_file_str = safe_ldb_file;
 }
 
 void SkinDatabase::set_local_store_pth_str(QString db, QString csv)
 {
-    m_local_db_pth_str = db;
+    if(m_local_csv_ready)
+    {
+        m_local_csv_f.close();
+        m_local_csv_ready = false;
+    }
     m_local_csv_pth_str = csv;
+
+    if(m_local_db_ready)
+    {
+        remove_qt_sqldb_conn(LOCAL_DB_CONN_NAME);
+        m_local_db_ready = false;
+    }
+    m_local_db_pth_str = db;
 }
 bool SkinDatabase::prepare_local_csv()
 {
@@ -944,12 +957,12 @@ bool SkinDatabase::write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                     safe_ldb_conn_name_str,&safe_ldb_ready);
 }
 
-void SkinDatabase::close_dbs()
+void SkinDatabase::close_dbs(db_ind_t db_ind)
 {
     /* This function informs remote-worker thread to close its dbs.
      * Local db is closed in destructor.
     */
-    emit close_rdb_sig();
+    emit close_rdb_sig(db_ind);
 }
 ////////////////////////////////////////////////////////////////
 void remove_qt_sqldb_conn(QString conn_name)

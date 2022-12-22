@@ -28,6 +28,13 @@ private:
     bool m_local_db_ready = false, m_local_csv_ready = false;
 
 public:
+    typedef enum _db_ind_t
+    {
+        DB_REMOTE = 0x01,
+        DB_SAFE_LDB = 0x02,
+        DB_ALL = 0x03,
+    }db_ind_t;
+
     typedef struct
     {
         quint32 lambda;
@@ -106,13 +113,13 @@ public:
     static bool db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
                                    quint32 error_code,
                                    QString tbl_name, QString cmd, db_type_t db_type);
-    void close_dbs();
+    void close_dbs(db_ind_t db_ind);
 signals:
     bool prepare_rdb_sig(setting_rdb_info_t rdb_info,
                          QString safe_ldb_dir_str,
                          QString safe_ldb_file_str);
     bool write_rdb_sig(SkinDatabase::db_info_intf_t intf);
-    bool close_rdb_sig();
+    bool close_rdb_sig(SkinDatabase::db_ind_t db_ind);
 
 private:
     QThread m_rdb_thread;

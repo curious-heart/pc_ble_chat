@@ -67,7 +67,6 @@ bool mkpth_if_not_exists(QString &pth_str)
     if(!data_dir.exists())
     {
         data_dir = QDir();
-        DIY_LOG(LOG_LEVEL::LOG_INFO, "%ls", pth_str.utf16());
         ret = data_dir.mkpath(pth_str);
     }
     return ret;

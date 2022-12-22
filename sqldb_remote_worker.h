@@ -11,6 +11,7 @@ public:
     SqlDbRemoteWorker();
     ~SqlDbRemoteWorker();
 
+
 private:
     bool m_remote_db_ready = false;
     QString m_safe_ldb_dir_str = "", m_safe_ldb_file_str = "";
@@ -20,7 +21,7 @@ public slots:
     bool prepare_rdb(setting_rdb_info_t db_info, QString safe_ldb_dir_str,
                                         QString safe_ldb_file_str);
     bool write_rdb(SkinDatabase::db_info_intf_t intf);
-    bool close_rdb();
+    bool close_rdb(SkinDatabase::db_ind_t);
 
 signals:
     void remote_db_prepared();

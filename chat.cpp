@@ -135,7 +135,8 @@ Chat::Chat(QWidget *parent)
     }
     else if(m_sw_settings.oth_settings.use_remote_db)
     {
-        m_skin_db->set_safe_ldb_for_rdb_fpn(QString("../") + m_safe_ldb_for_rdb_dir_rel_name,
+        m_skin_db->set_safe_ldb_for_rdb_fpn(QString("../") + m_data_dir_rel_name
+                                            + "/" + m_safe_ldb_for_rdb_dir_rel_name,
                                             m_safe_ldb_for_rdb_rel_name);
     }
 
@@ -992,6 +993,10 @@ void Chat::on_choosePathButton_clicked()
         m_local_db_pth_str = m_data_pth_str + "/" + QString(m_local_db_dir_rel_name);
         m_dir_ready = false;
 
+        if(m_skin_db)
+        {
+            m_skin_db->set_local_store_pth_str(m_local_db_pth_str, m_data_pth_str);
+        }
         if(m_sw_settings.oth_settings.use_remote_db && m_skin_db)
         {
             m_skin_db->set_safe_ldb_for_rdb_fpn(m_data_pth_str + "/"
@@ -1146,7 +1151,7 @@ void Chat::on_quitButton_clicked()
 {
     if(m_skin_db)
     {
-        m_skin_db->close_dbs();
+        m_skin_db->close_dbs(SkinDatabase::DB_ALL);
     }
 }
 
@@ -1154,7 +1159,7 @@ void Chat::closeEvent(QCloseEvent *event)
 {
     if(m_skin_db)
     {
-        m_skin_db->close_dbs();
+        m_skin_db->close_dbs(SkinDatabase::DB_ALL);
     }
     event->accept();
 }
