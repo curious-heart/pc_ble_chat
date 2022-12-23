@@ -138,6 +138,10 @@ Chat::Chat(QWidget *parent)
         m_skin_db->set_safe_ldb_for_rdb_fpn(QString("../") + m_data_dir_rel_name
                                             + "/" + m_safe_ldb_for_rdb_dir_rel_name,
                                             m_safe_ldb_for_rdb_rel_name);
+        connect(m_skin_db, &SkinDatabase::rdb_state_upd_sig,
+                this,  &Chat::rdb_state_upd_handler);
+        connect(m_skin_db, &SkinDatabase::upload_safe_ldb_end_sig,
+                this,  &Chat::upload_safe_ldb_end_handler);
     }
 
     connect(&m_write_wait_resp_timer, &QTimer::timeout,
@@ -1052,8 +1056,7 @@ void Chat::on_fileVisualButton_clicked()
     }
     else if(ui->otherFileradioButton->isChecked())
     {
-        QString fpn = QFileDialog::getOpenFileName(this,
-                                                 tr("请选择文件"),
+        QString fpn = QFileDialog::getOpenFileName(this, tr("请选择文件"),
                                                  QDir::currentPath(),
                                                  tr("Text Files(*.txt)"));
         if(fpn.isEmpty())
@@ -1164,4 +1167,66 @@ void Chat::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
+void Chat::upload_safe_ldb_end_handler()
+{
+    m_upload_safe_ldb_now = false;
+}
 
+void Chat::select_safe_ldb_for_upload()
+{
+    QString fpn = QFileDialog::getOpenFileName(this, tr("请选择文件"),
+                                             QDir::currentPath(), tr("(*.sqlite)"));
+    if(fpn.isEmpty())
+    {
+        return;
+    }
+    else
+    {
+        ui->safeldbLabel->setText(QFileInfo(fpn).fileName());
+
+        m_safe_ldb_for_upload_fpn = fpn;
+        m_skin_db->upload_safe_ldb(m_safe_ldb_for_upload_fpn);
+    }
+}
+
+void Chat::rdb_state_upd_handler(SkinDatabase::rdb_state_t rdb_st)
+{
+    m_remote_db_wait_box.hide();
+    if(m_upload_safe_ldb_now)
+    {
+        if(rdb_st == SkinDatabase::RDB_ST_OK)
+        {
+            select_safe_ldb_for_upload();
+        }
+        else
+        {
+            QMessageBox::critical(nullptr, "!!!",
+                                  "Remote db is not availabel");
+        }
+    }
+}
+void Chat::on_uploadLdbPB_clicked()
+{
+    if(!m_skin_db)
+    {
+        QMessageBox::critical(nullptr, "!!!",
+                              "All db function can't work. Please check the log.");
+        return;
+    }
+    m_upload_safe_ldb_now = true;
+    if(m_skin_db->remote_db_st() == SkinDatabase::RDB_ST_OK)
+    {
+        select_safe_ldb_for_upload();
+    }
+    else
+    {
+        m_skin_db->prepare_remote_db();
+
+        QMessageBox msgBox;
+        m_remote_db_wait_box.setText("Remote db preparing...");
+        m_remote_db_wait_box.setStandardButtons(QMessageBox::NoButton);
+        m_remote_db_wait_box.setWindowFlags(Qt::FramelessWindowHint | Qt::CustomizeWindowHint);
+        m_remote_db_wait_box.setWindowModality(Qt::NonModal);
+        m_remote_db_wait_box.show();
+    }
+}

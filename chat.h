@@ -64,10 +64,10 @@
 #include <QDomDocument>
 #include <QList>
 #include <QCloseEvent>
+#include <QMessageBox>
 
 #include "sw_setting_parse.h"
 #include "sqldb_works.h"
-#include "sqldb_remote_worker.h"
 
 QT_USE_NAMESPACE
 
@@ -134,6 +134,10 @@ private slots:
 
     void on_quitButton_clicked();
 
+    void on_uploadLdbPB_clicked();
+
+    void rdb_state_upd_handler(SkinDatabase::rdb_state_t rdb_st);
+    void upload_safe_ldb_end_handler();
 private:
     int adapterFromUserSelection() const;
     int currentAdapterIndex = 0;
@@ -207,6 +211,10 @@ private:
 
     QThread m_log_thread;
 
+    QString m_safe_ldb_for_upload_fpn = "";
+    bool m_upload_safe_ldb_now = false;
+    void select_safe_ldb_for_upload();
+    QMessageBox m_remote_db_wait_box;
 protected:
     void closeEvent(QCloseEvent * event);
 };

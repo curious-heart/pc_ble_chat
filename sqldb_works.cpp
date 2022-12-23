@@ -153,7 +153,7 @@ static inline QString _CREATE_TBL_DATUM_CMD_(SkinDatabase::db_type_t db_t)
     }
     cmd += m_col_date_str + QString(" TEXT,") + m_col_time_str + QString(" TEXT,")\
         + m_col_dev_id_str + QString(" TEXT,") + m_col_expt_id_str + QString(" TEXT,")\
-        + m_col_rec_id_str + QString(" BIGINT");
+        + m_col_rec_id_str + QString(" INTEGER");
     if(SkinDatabase::DB_MYSQL == db_t)
     {
         cmd += QString(" AUTO_INCREMENT");
@@ -355,6 +355,12 @@ SkinDatabase::SkinDatabase(setting_rdb_info_t * rdb_info)
                     rdb_worker, &SqlDbRemoteWorker::write_rdb);
             connect(this, &SkinDatabase::close_rdb_sig,
                     rdb_worker, &SqlDbRemoteWorker::close_rdb);
+            connect(rdb_worker, &SqlDbRemoteWorker::remote_db_prepared_sig,
+                    this, &SkinDatabase::rdb_prepare_ret_sig_handler);
+            connect(this, &SkinDatabase::upload_safe_ldb_sig,
+                    rdb_worker, &SqlDbRemoteWorker::upload_safe_ldb_to_rdb);
+            connect(rdb_worker, &SqlDbRemoteWorker::upload_safe_ldb_done_sig,
+                    this, &SkinDatabase::upload_safe_ldb_done_handler);
             m_rdb_thread.start();
             DIY_LOG(LOG_LEVEL::LOG_INFO, "New thead for remote db store started.");
         }
@@ -988,6 +994,37 @@ void SkinDatabase::close_dbs(db_ind_t db_ind)
     */
     emit close_rdb_sig(db_ind);
 }
+
+void SkinDatabase::prepare_remote_db()
+{
+    emit prepare_rdb_sig(*m_remote_db_info, m_safe_ldb_dir_str, m_safe_ldb_file_str);
+}
+SkinDatabase::rdb_state_t SkinDatabase::remote_db_st()
+{
+    return m_rdb_st;
+}
+
+void SkinDatabase::rdb_prepare_ret_sig_handler(bool rdb_p)
+{
+    if(rdb_p)
+    {
+        m_rdb_st = RDB_ST_OK;
+    }
+    else
+    {
+        m_rdb_st = RDB_ST_ERR;
+    }
+    emit rdb_state_upd_sig(m_rdb_st);
+}
+
+void SkinDatabase::upload_safe_ldb(QString safe_ldb_fpn)
+{
+    emit upload_safe_ldb_sig(safe_ldb_fpn);
+}
+
+void SkinDatabase::upload_safe_ldb_done_handler()
+{}
+
 ////////////////////////////////////////////////////////////////
 void remove_qt_sqldb_conn(QString conn_name)
 {

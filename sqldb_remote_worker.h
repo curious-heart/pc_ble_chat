@@ -23,12 +23,14 @@ public slots:
     bool write_rdb(SkinDatabase::db_info_intf_t intf, setting_rdb_info_t rdb_info,
                    QString safe_ldb_dir_str, QString safe_ldb_file_str);
     bool close_rdb(SkinDatabase::db_ind_t);
+    bool upload_safe_ldb_to_rdb(QString safe_ldb_fpn);
 
 signals:
-    void remote_db_prepared(bool ok);
-    void remote_db_write_done();
-    void remote_db_write_error();
-    void remote_db_closed();
+    void remote_db_prepared_sig(bool ok);
+    void remote_db_write_done_sig();
+    void remote_db_write_error_sig();
+    void remote_db_closed_sig();
+    void upload_safe_ldb_done_sig();
 };
 
 #endif // SQLDB_REMOTE_WORKER_H

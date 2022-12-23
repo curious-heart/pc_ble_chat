@@ -73,6 +73,14 @@ public:
         DB_SQLITE,
         DB_MYSQL,
     }db_type_t;
+
+    typedef enum
+    {
+        RDB_ST_UNKNOWN = -1,
+        RDB_ST_OK,
+        RDB_ST_ERR,
+    }rdb_state_t;
+
 private:
     db_info_intf_t m_intf;
     QString m_safe_ldb_dir_str = "";
@@ -82,6 +90,7 @@ private:
     QFile m_local_csv_f;
     bool prepare_local_csv();
     bool write_local_csv(db_info_intf_t &intf);
+    rdb_state_t m_rdb_st = RDB_ST_UNKNOWN;
 
 public:
     SkinDatabase(setting_rdb_info_t * rdb_info = nullptr);
@@ -115,13 +124,24 @@ public:
                                    QSqlError &cur_sql_err,
                                    QString tbl_name, QString cmd, db_type_t db_type);
     void close_dbs(db_ind_t db_ind);
+
+    rdb_state_t remote_db_st();
+    void prepare_remote_db();
+    void upload_safe_ldb(QString safe_ldb_fpn);
+
 signals:
     bool prepare_rdb_sig(setting_rdb_info_t rdb_info,
                          QString safe_ldb_dir_str, QString safe_ldb_file_str);
     bool write_rdb_sig(SkinDatabase::db_info_intf_t intf, setting_rdb_info_t rdb_info,
                        QString safe_ldb_dir_str, QString safe_ldb_file_str);
     bool close_rdb_sig(SkinDatabase::db_ind_t db_ind);
-
+    void upload_safe_ldb_sig(QString safe_ldb_fpn);
+    void rdb_state_upd_sig(SkinDatabase::rdb_state_t rdb_st); //send signal to chat.
+    void upload_safe_ldb_end_sig();
+public slots:
+    /*handle signal from remote worker.*/
+    void rdb_prepare_ret_sig_handler(bool rdb_p);
+    void upload_safe_ldb_done_handler();
 private:
     QThread m_rdb_thread;
 };

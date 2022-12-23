@@ -87,7 +87,7 @@ bool SqlDbRemoteWorker::prepare_rdb(setting_rdb_info_t db_info, QString safe_ldb
         }
     }
 
-    emit remote_db_prepared(m_remote_db_ready);
+    emit remote_db_prepared_sig(m_remote_db_ready);
     if(m_remote_db_ready)
     {
         DIY_LOG(LOG_LEVEL::LOG_INFO, "Remote db prepared.");
@@ -118,12 +118,12 @@ bool SqlDbRemoteWorker::write_rdb(SkinDatabase::db_info_intf_t intf,
                                             m_safe_ldb_ready, ret_ind);
         if(!ret)
         {
-            emit remote_db_write_error();
+            emit remote_db_write_error_sig();
             DIY_LOG(LOG_LEVEL::LOG_ERROR, "Write remote error!");
         }
         else
         {
-            emit remote_db_write_done();
+            emit remote_db_write_done_sig();
         }
     }
     else
@@ -155,7 +155,7 @@ bool SqlDbRemoteWorker::close_rdb(SkinDatabase::db_ind_t db_ind)
         {
             remove_qt_sqldb_conn(REMOTE_DB_CONN_NAME);
             m_remote_db_ready = false;
-            emit remote_db_closed();
+            emit remote_db_closed_sig();
         }
         DIY_LOG(LOG_LEVEL::LOG_INFO, ".............. remote db is closed in thread: %u",
                 (quint64)(QThread::currentThreadId()));
@@ -166,5 +166,11 @@ bool SqlDbRemoteWorker::close_rdb(SkinDatabase::db_ind_t db_ind)
         remove_qt_sqldb_conn(SAFE_LOCAL_DB_CONN_NAME);
     }
 
+    return true;
+}
+
+bool SqlDbRemoteWorker::upload_safe_ldb_to_rdb(QString safe_ldb_fpn)
+{
+    emit upload_safe_ldb_done_sig();
     return true;
 }
