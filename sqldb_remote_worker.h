@@ -20,11 +20,12 @@ private:
 public slots:
     bool prepare_rdb(setting_rdb_info_t db_info, QString safe_ldb_dir_str,
                                         QString safe_ldb_file_str);
-    bool write_rdb(SkinDatabase::db_info_intf_t intf);
+    bool write_rdb(SkinDatabase::db_info_intf_t intf, setting_rdb_info_t rdb_info,
+                   QString safe_ldb_dir_str, QString safe_ldb_file_str);
     bool close_rdb(SkinDatabase::db_ind_t);
 
 signals:
-    void remote_db_prepared();
+    void remote_db_prepared(bool ok);
     void remote_db_write_done();
     void remote_db_write_error();
     void remote_db_closed();

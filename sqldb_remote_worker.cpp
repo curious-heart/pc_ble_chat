@@ -79,7 +79,6 @@ bool SqlDbRemoteWorker::prepare_rdb(setting_rdb_info_t db_info, QString safe_ldb
                         err.utf16());
                 break;
             }
-            emit remote_db_prepared();
             break;
         }
         if(!m_remote_db_ready)
@@ -87,6 +86,8 @@ bool SqlDbRemoteWorker::prepare_rdb(setting_rdb_info_t db_info, QString safe_ldb
             QSqlDatabase::removeDatabase(REMOTE_DB_CONN_NAME);
         }
     }
+
+    emit remote_db_prepared(m_remote_db_ready);
     if(m_remote_db_ready)
     {
         DIY_LOG(LOG_LEVEL::LOG_INFO, "Remote db prepared.");
@@ -98,19 +99,23 @@ bool SqlDbRemoteWorker::prepare_rdb(setting_rdb_info_t db_info, QString safe_ldb
     return m_remote_db_ready;
 }
 
-bool SqlDbRemoteWorker::write_rdb(SkinDatabase::db_info_intf_t intf)
+bool SqlDbRemoteWorker::write_rdb(SkinDatabase::db_info_intf_t intf,
+                                  setting_rdb_info_t rdb_info,
+                                  QString safe_ldb_dir_str, QString safe_ldb_file_str)
 {
     bool ret = false;
+
+    prepare_rdb(rdb_info, safe_ldb_dir_str, safe_ldb_file_str);
     if(m_remote_db_ready)
     {
         QSqlDatabase remote_db;
+        SkinDatabase::db_ind_t ret_ind = SkinDatabase::DB_NONE;
 
         remote_db = QSqlDatabase::database(REMOTE_DB_CONN_NAME);
         ret = SkinDatabase::write_remote_db(remote_db, intf, SkinDatabase::DB_MYSQL,
                                             m_safe_ldb_dir_str, m_safe_ldb_file_str,
                                             SAFE_LOCAL_DB_CONN_NAME,
-                                            m_safe_ldb_ready);
-        m_safe_ldb_ready = ret;
+                                            m_safe_ldb_ready, ret_ind);
         if(!ret)
         {
             emit remote_db_write_error();

@@ -30,6 +30,7 @@ private:
 public:
     typedef enum _db_ind_t
     {
+        DB_NONE = 0,
         DB_REMOTE = 0x01,
         DB_SAFE_LDB = 0x02,
         DB_ALL = 0x03,
@@ -68,7 +69,7 @@ public:
     }db_pos_t;
     typedef enum
     {
-        DB_NONE,
+        DB_CSV,
         DB_SQLITE,
         DB_MYSQL,
     }db_type_t;
@@ -96,29 +97,29 @@ public:
                                 db_type_t db_type,
                                 QString safe_ldb_pth_str, QString safe_ldb_name_str,
                                 QString safe_ldb_conn_name_str,
-                                bool &safe_ldb_ready);
+                                bool &safe_ldb_ready, db_ind_t &ret_ind);
     static bool write_local_db(QSqlDatabase &qdb, db_info_intf_t &intf, db_type_t db_type);
     /*
      * This write_db may be called from multi thread simultaneous.
-     * When the db_pos is REMOTE, the last 4 parameters should be assigned
-     * to proper value.
+     * When the db_pos is REMOTE, the parameters with default value should be assigned
+     * proper value.
     */
     static bool write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                          db_pos_t db_pos, db_type_t db_type,
                          QString safe_ldb_pth_str = "", QString safe_ldb_name_str = "",
                          QString safe_ldb_conn_name_str = "",
-                         bool *safe_ldb_ready = nullptr);
+                         bool *safe_ldb_ready = nullptr, db_ind_t *ret_ind = nullptr);
     static bool prepare_safe_ldb(QString pth, QString name, QString tbl_name,
-                                    QString safe_ldb_conn_name_str = "");
+                                    QString safe_ldb_conn_name_str);
     static bool db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
-                                   quint32 error_code,
+                                   QSqlError &cur_sql_err,
                                    QString tbl_name, QString cmd, db_type_t db_type);
     void close_dbs(db_ind_t db_ind);
 signals:
     bool prepare_rdb_sig(setting_rdb_info_t rdb_info,
-                         QString safe_ldb_dir_str,
-                         QString safe_ldb_file_str);
-    bool write_rdb_sig(SkinDatabase::db_info_intf_t intf);
+                         QString safe_ldb_dir_str, QString safe_ldb_file_str);
+    bool write_rdb_sig(SkinDatabase::db_info_intf_t intf, setting_rdb_info_t rdb_info,
+                       QString safe_ldb_dir_str, QString safe_ldb_file_str);
     bool close_rdb_sig(SkinDatabase::db_ind_t db_ind);
 
 private:
