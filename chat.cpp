@@ -1167,9 +1167,20 @@ void Chat::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
-void Chat::upload_safe_ldb_end_handler()
+void Chat::upload_safe_ldb_end_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result)
 {
     m_upload_safe_ldb_now = false;
+    QString result_str = QString("Upload result:\n");
+
+    foreach(const SkinDatabase::tbl_rec_op_result_t &tbl_ret, op_result)
+    {
+        QString s = tbl_ret.tbl_name +
+                QString(": succ:%1, fail:%2, partialy-succ:%3. Total %4.\n")
+                .arg(tbl_ret.rec_succ).arg(tbl_ret.rec_fail)
+                .arg(tbl_ret.rec_part_succ).arg(tbl_ret.rec_cnt);
+        result_str += s;
+    }
+    QMessageBox::information(nullptr, "Result", result_str);
 }
 
 void Chat::select_safe_ldb_for_upload()

@@ -30,7 +30,7 @@ signals:
     void remote_db_write_done_sig();
     void remote_db_write_error_sig();
     void remote_db_closed_sig();
-    void upload_safe_ldb_done_sig();
+    void upload_safe_ldb_done_sig(QList<SkinDatabase::tbl_rec_op_result_t> op_result);
 };
 
 #endif // SQLDB_REMOTE_WORKER_H

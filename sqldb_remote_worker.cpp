@@ -6,6 +6,7 @@
 
 #define REMOTE_DB_CONN_NAME QString("remote_mysql_conntection")
 #define SAFE_LOCAL_DB_CONN_NAME QString("safe_local_db_connection")
+#define UPLOAD_SAFE_LDB_CONN_NAME QString("upload_safe_ldb_connection")
 
 SqlDbRemoteWorker::SqlDbRemoteWorker()
 {
@@ -112,7 +113,8 @@ bool SqlDbRemoteWorker::write_rdb(SkinDatabase::db_info_intf_t intf,
         SkinDatabase::db_ind_t ret_ind = SkinDatabase::DB_NONE;
 
         remote_db = QSqlDatabase::database(REMOTE_DB_CONN_NAME);
-        ret = SkinDatabase::write_remote_db(remote_db, intf, SkinDatabase::DB_MYSQL,
+        ret = SkinDatabase::write_remote_db(remote_db, intf,
+                                            SkinDatabase::DB_MYSQL, true,
                                             m_safe_ldb_dir_str, m_safe_ldb_file_str,
                                             SAFE_LOCAL_DB_CONN_NAME,
                                             m_safe_ldb_ready, ret_ind);
@@ -171,6 +173,39 @@ bool SqlDbRemoteWorker::close_rdb(SkinDatabase::db_ind_t db_ind)
 
 bool SqlDbRemoteWorker::upload_safe_ldb_to_rdb(QString safe_ldb_fpn)
 {
-    emit upload_safe_ldb_done_sig();
-    return true;
+    bool ret = true;
+    QSqlDatabase safe_ldb, rdb;
+
+    safe_ldb = QSqlDatabase::addDatabase(QString("QSQLITE"),
+                                         UPLOAD_SAFE_LDB_CONN_NAME);
+    if(!safe_ldb.isValid())
+    {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Add database safe ldb %ls error!!!",
+                UPLOAD_SAFE_LDB_CONN_NAME.utf16());
+        return false;
+    }
+    safe_ldb.setDatabaseName(safe_ldb_fpn);
+    safe_ldb.open();
+    if(!safe_ldb.isOpen())
+    {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Open database safe ldb %ls error!!!",
+                safe_ldb_fpn.utf16());
+        return false;
+    }
+
+    /*Remote db should have been prepared before reach here.*/
+    if(!m_remote_db_ready)
+    {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Remote not prepared, can't upload safe ldb!");
+        safe_ldb.close();
+        QSqlDatabase::removeDatabase(UPLOAD_SAFE_LDB_CONN_NAME);
+        return false;
+    }
+    rdb = QSqlDatabase::database(REMOTE_DB_CONN_NAME);
+
+    QList<SkinDatabase::tbl_rec_op_result_t> op_result;
+    SkinDatabase::safe_ldb_to_remote_db(safe_ldb, rdb, op_result);
+
+    emit upload_safe_ldb_done_sig(op_result);
+    return ret;
 }

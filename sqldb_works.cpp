@@ -752,7 +752,7 @@ bool SkinDatabase::db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
  *    but when writting record 2, network fails, so 2 is written into safe ldb.)
 */
 bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
-                            db_pos_t db_pos, db_type_t db_type,
+                            db_pos_t db_pos, db_type_t db_type, bool use_safe_ldb,
                             QString safe_ldb_pth_str, QString safe_ldb_name_str,
                             QString safe_ldb_conn_name_str,
                             bool *safe_ldb_ready, db_ind_t *ret_ind)
@@ -794,7 +794,7 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                             "Cmd:%ls\nsql err info: %ls",
                            name.utf16(), qdb.databaseName().utf16(),
                             cmd.utf16(),sqlerr_str.utf16());
-                    if(REMOTE == db_pos)
+                    if((REMOTE == db_pos) && use_safe_ldb)
                     {
                         DIY_LOG(LOG_LEVEL::LOG_ERROR, "Insert remote db error."
                                 "Now record it in local safe db.");
@@ -846,7 +846,7 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
             {
                 sql_err = query.lastError();
                 ret = db_ins_err_process(qdb, intf, sql_err, name, cmd, db_type);
-                if(!ret && (REMOTE == db_pos))
+                if(!ret && (REMOTE == db_pos) && use_safe_ldb)
                 {
                     DIY_LOG(LOG_LEVEL::LOG_ERROR, "Insert remote db error."
                             "Now record it in local safe db.");
@@ -977,12 +977,13 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
 
 /*invoked from remote worker thread.*/
 bool SkinDatabase::write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
-                                   db_type_t db_type, QString safe_ldb_pth_str,
+                                   db_type_t db_type, bool use_safe_ldb,
+                                   QString safe_ldb_pth_str,
                                    QString safe_ldb_name_str,
                                    QString safe_ldb_conn_name_str,
                                    bool &safe_ldb_ready, db_ind_t &ret_ind)
 {
-    return write_db(qdb, intf, REMOTE, db_type,
+    return write_db(qdb, intf, REMOTE, db_type, use_safe_ldb,
                     safe_ldb_pth_str, safe_ldb_name_str,
                     safe_ldb_conn_name_str,&safe_ldb_ready, &ret_ind);
 }
@@ -1022,9 +1023,165 @@ void SkinDatabase::upload_safe_ldb(QString safe_ldb_fpn)
     emit upload_safe_ldb_sig(safe_ldb_fpn);
 }
 
-void SkinDatabase::upload_safe_ldb_done_handler()
-{}
+void SkinDatabase::upload_safe_ldb_done_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result)
+{
+    emit upload_safe_ldb_end_sig(op_result);
+}
 
+static void get_sql_select_helper(QMap<QString, void*> &pointer,
+                                  SkinDatabase::db_info_intf_t &intf)
+{
+    pointer.insert(m_tbl_expts_str, &intf.expt_changed);
+    pointer.insert(m_tbl_expts_str + "." + m_col_expt_id_str, &intf.expt_id);
+    pointer.insert(m_tbl_expts_str + "." + m_col_desc_str, &intf.expt_desc);
+    pointer.insert(m_tbl_expts_str + "." + m_col_date_str, &intf.expt_date);
+    pointer.insert(m_tbl_expts_str + "." + m_col_time_str, &intf.expt_time);
+
+    pointer.insert(m_tbl_objects_str, &intf.obj_changed);
+    pointer.insert(m_tbl_objects_str + "." + m_col_obj_id_str, &intf.obj_id);
+    pointer.insert(m_tbl_objects_str + "." + m_col_skin_type_str, &intf.skin_type);
+    pointer.insert(m_tbl_objects_str + "." + m_col_desc_str, &intf.obj_desc);
+
+    pointer.insert(m_tbl_devices_str, &intf.dev_changed);
+    pointer.insert(m_tbl_devices_str + "." + m_col_dev_id_str, &intf.dev_id);
+    pointer.insert(m_tbl_devices_str + "." + m_col_dev_addr_str, &intf.dev_addr);
+    pointer.insert(m_tbl_devices_str + "." + m_col_desc_str, &intf.dev_desc);
+
+    pointer.insert(m_tbl_datum_str, nullptr);
+    pointer.insert(m_tbl_datum_str + "." + m_col_obj_id_str, &intf.obj_id);
+    pointer.insert(m_tbl_datum_str + "." + m_col_pos_str, &intf.pos);
+    pointer.insert(m_tbl_datum_str + "." + m_col_lambda_str, &intf.lambda_data);
+    pointer.insert(m_tbl_datum_str + "." + m_col_data_str, &intf.lambda_data);
+    pointer.insert(m_tbl_datum_str + "." + m_col_date_str, &intf.rec_date);
+    pointer.insert(m_tbl_datum_str + "." + m_col_time_str, &intf.rec_time);
+    pointer.insert(m_tbl_datum_str + "." + m_col_dev_id_str, &intf.dev_id);
+    pointer.insert(m_tbl_datum_str + "." + m_col_expt_id_str, &intf.expt_id);
+}
+
+void SkinDatabase::safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &rdb,
+                                         QList<SkinDatabase::tbl_rec_op_result_t>& op_result)
+{
+    typedef struct
+    {
+        QString tbl_name;
+        QString tbl_cols;
+        QString primary_id_str;
+    }tbl_name_cols_map_t;
+    tbl_name_cols_map_t tbl_name_cols_map[] =
+    {
+        {m_tbl_expts_str, _TBL_EXPTS_COLS_, m_col_expt_id_str},
+        {m_tbl_objects_str, _TBL_OBJECTS_COLS_, m_col_obj_id_str},
+        {m_tbl_devices_str, _TBL_DEVICES_COLS_, m_col_dev_id_str},
+        {m_tbl_datum_str, _TBL_DATUM_COLS_ + m_col_rec_id_str, m_col_rec_id_str},
+    };
+    QMap<QString, void*> helper;
+    db_info_intf_t intf;
+    QSqlQuery safe_ldb_q(safe_ldb);
+    bool ret = true;
+    db_lambda_data_s_t lambda_data_p;
+    bool one_data_item = false;
+    SkinDatabase::tbl_rec_op_result_t tbl_op_ret;
+
+    get_sql_select_helper(helper, intf);
+    for(int idx = 0; idx < DIY_SIZE_OF_ARRAY(tbl_name_cols_map); idx++)
+    {
+        QString tbl_name = tbl_name_cols_map[idx].tbl_name;
+        QString cols = tbl_name_cols_map[idx].tbl_cols;
+        QStringList col_list = cols.split(",");
+        QString primary_key_str = tbl_name_cols_map[idx].primary_id_str;
+        QString primary_key_val;
+
+        tbl_op_ret.tbl_name = tbl_name;
+        tbl_op_ret.rec_succ = tbl_op_ret.rec_fail = tbl_op_ret.rec_part_succ = 0;
+        QString cmd = QString("SELECT ") + cols + " FROM " + tbl_name + ";";
+        safe_ldb_q.exec(cmd);
+        while(safe_ldb_q.next())
+        {
+            if(m_tbl_datum_str == tbl_name)
+            {
+                one_data_item = false;
+                for(int c_idx = 0; c_idx < col_list.count(); c_idx++)
+                {
+                    if((m_col_lambda_str == col_list[c_idx])
+                            || (m_col_data_str == col_list[c_idx]))
+                    {
+                        if(m_col_lambda_str == col_list[c_idx])
+                        {
+                            lambda_data_p.lambda = safe_ldb_q.value(c_idx).toUInt();
+                        }
+                        else
+                        {
+                            lambda_data_p.data = safe_ldb_q.value(c_idx).toULongLong();
+                        }
+                        if(!one_data_item)
+                        {
+                            one_data_item = true;
+                        }
+                        else
+                        {
+                            (*(QList<db_lambda_data_s_t>*)(helper[tbl_name + "." + col_list[c_idx]])).append(lambda_data_p);
+                        }
+                    }
+                    else if(m_col_rec_id_str != col_list[c_idx])
+                    {
+                        *(QString*)(helper[tbl_name + "." + col_list[c_idx]])
+                                = safe_ldb_q.value(c_idx).toString();
+                        if(col_list[c_idx] == primary_key_str)
+                        {
+                            primary_key_val = safe_ldb_q.value(c_idx).toString();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for(int c_idx = 0; c_idx < col_list.count(); c_idx++)
+                {
+                    *(QString*)(helper[tbl_name + "." + col_list[c_idx]])
+                            = safe_ldb_q.value(c_idx).toString();
+                    if(col_list[c_idx] == primary_key_str)
+                    {
+                        primary_key_val = safe_ldb_q.value(c_idx).toString();
+                    }
+                }
+                *(bool*)(helper[tbl_name]) = true;
+            }
+            /*now write it into rdb.*/
+            ret = SkinDatabase::write_db(rdb, intf, SkinDatabase::REMOTE,
+                                         SkinDatabase::DB_MYSQL);
+            if(ret)
+            {
+                /*Delete this record in safe ldb.*/
+                QString cmd = QString("DELETE FROM %1 WHERE %2=\"%3\";").arg(tbl_name,
+                                                                             primary_key_str,
+                                                                             primary_key_val);
+                QSqlQuery del_safe_ldb_q(safe_ldb);
+                ret = del_safe_ldb_q.exec();
+                if(!ret)
+                {
+                    ++(tbl_op_ret.rec_part_succ);
+                    DIY_LOG(LOG_LEVEL::LOG_WARN,
+                            "Record has been written into remote db,"
+                            "but the following command to delete it from safe ldb fails:\n%ls\n"
+                            "Please delete it manually to avoid redundant records in remote db when you perform other upload using this safe ldb file.",
+                            cmd.utf16());
+                }
+                else
+                {
+                    ++(tbl_op_ret.rec_succ);
+                }
+            }
+            else
+            {
+                ++(tbl_op_ret.rec_fail);
+                DIY_LOG(LOG_LEVEL::LOG_ERROR, "Upload safe ldb record error!!!");
+            }
+        }
+        tbl_op_ret.rec_cnt = tbl_op_ret.rec_fail + tbl_op_ret.rec_part_succ
+                            + tbl_op_ret.rec_succ;
+        op_result.append(tbl_op_ret);
+    }
+}
 ////////////////////////////////////////////////////////////////
 void remove_qt_sqldb_conn(QString conn_name)
 {

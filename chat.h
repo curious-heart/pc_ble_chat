@@ -137,7 +137,7 @@ private slots:
     void on_uploadLdbPB_clicked();
 
     void rdb_state_upd_handler(SkinDatabase::rdb_state_t rdb_st);
-    void upload_safe_ldb_end_handler();
+    void upload_safe_ldb_end_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result);
 private:
     int adapterFromUserSelection() const;
     int currentAdapterIndex = 0;
