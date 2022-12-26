@@ -105,12 +105,12 @@ bool SqlDbRemoteWorker::write_rdb(SkinDatabase::db_info_intf_t intf,
                                   QString safe_ldb_dir_str, QString safe_ldb_file_str)
 {
     bool ret = false;
+    SkinDatabase::db_ind_t ret_ind = SkinDatabase::DB_NONE;
 
     prepare_rdb(rdb_info, safe_ldb_dir_str, safe_ldb_file_str);
     if(m_remote_db_ready)
     {
         QSqlDatabase remote_db;
-        SkinDatabase::db_ind_t ret_ind = SkinDatabase::DB_NONE;
 
         remote_db = QSqlDatabase::database(REMOTE_DB_CONN_NAME);
         ret = SkinDatabase::write_remote_db(remote_db, intf,
@@ -120,12 +120,7 @@ bool SqlDbRemoteWorker::write_rdb(SkinDatabase::db_info_intf_t intf,
                                             m_safe_ldb_ready, ret_ind);
         if(!ret)
         {
-            emit remote_db_write_error_sig();
             DIY_LOG(LOG_LEVEL::LOG_ERROR, "Write remote error!");
-        }
-        else
-        {
-            emit remote_db_write_done_sig();
         }
     }
     else
@@ -145,7 +140,9 @@ bool SqlDbRemoteWorker::write_rdb(SkinDatabase::db_info_intf_t intf,
             safe_ldb = QSqlDatabase::database(SAFE_LOCAL_DB_CONN_NAME);
             ret = SkinDatabase::write_local_db(safe_ldb, intf, SkinDatabase::DB_SQLITE);
         }
+        ret_ind = SkinDatabase::DB_SAFE_LDB;
     }
+    emit remote_db_write_done_sig(ret_ind, ret);
     return ret;
 }
 

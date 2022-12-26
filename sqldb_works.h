@@ -138,20 +138,26 @@ public:
     void upload_safe_ldb(QString safe_ldb_fpn);
 
 signals:
+    /*sent to remote_worker.*/
     bool prepare_rdb_sig(setting_rdb_info_t rdb_info,
                          QString safe_ldb_dir_str, QString safe_ldb_file_str);
     bool write_rdb_sig(SkinDatabase::db_info_intf_t intf, setting_rdb_info_t rdb_info,
                        QString safe_ldb_dir_str, QString safe_ldb_file_str);
     bool close_rdb_sig(SkinDatabase::db_ind_t db_ind);
     void upload_safe_ldb_sig(QString safe_ldb_fpn);
-    void rdb_state_upd_sig(SkinDatabase::rdb_state_t rdb_st); //send signal to chat.
+
+    /*sent to chat*/
+    void rdb_state_upd_sig(SkinDatabase::rdb_state_t rdb_st);
     void upload_safe_ldb_end_sig(QList<SkinDatabase::tbl_rec_op_result_t> op_result,
                                  bool result_ret);
+    void rdb_write_start_sig();
+    void rdb_write_done_sig(SkinDatabase::db_ind_t write_ind, bool ret);
 public slots:
     /*handle signal from remote worker.*/
-    void rdb_prepare_ret_sig_handler(bool rdb_p);
+    void rdb_prepare_ret_handler(bool rdb_p);
     void upload_safe_ldb_done_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result,
                                       bool result_ret);
+    void remote_db_write_done_handler(SkinDatabase::db_ind_t write_ind, bool ret);
 private:
     QThread m_rdb_thread;
 };

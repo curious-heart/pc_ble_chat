@@ -27,8 +27,7 @@ public slots:
 
 signals:
     void remote_db_prepared_sig(bool ok);
-    void remote_db_write_done_sig();
-    void remote_db_write_error_sig();
+    void remote_db_write_done_sig(SkinDatabase::db_ind_t write_ind, bool ret);
     void remote_db_closed_sig();
     void upload_safe_ldb_done_sig(QList<SkinDatabase::tbl_rec_op_result_t> op_result,
                                   bool result_ret);

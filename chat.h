@@ -139,6 +139,9 @@ private slots:
     void rdb_state_upd_handler(SkinDatabase::rdb_state_t rdb_st);
     void upload_safe_ldb_end_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result,
                                      bool result_ret);
+    void rdb_write_start_handler();
+    void rdb_write_done_hanlder(SkinDatabase::db_ind_t write_ind, bool ret);
+
 private:
     int adapterFromUserSelection() const;
     int currentAdapterIndex = 0;
@@ -212,10 +215,21 @@ private:
 
     QThread m_log_thread;
 
+    bool m_writing_rdb = false;
     QString m_safe_ldb_for_upload_fpn = "";
     bool m_upload_safe_ldb_now = false;
     void select_safe_ldb_for_upload();
     QMessageBox m_remote_db_wait_box;
+    void show_rdb_wait_box(bool show, QString title = "", QString box_str = "",
+                         QMessageBox::StandardButtons buttons = QMessageBox::NoButton);
+    typedef enum
+    {
+        PUSH_BTNS,
+        POP_BTNS
+    }chat_push_pop_btn_t;
+    void push_pop_data_collection_btns(chat_push_pop_btn_t p_p);
+    void disable_data_collection_btns();
+
 protected:
     void closeEvent(QCloseEvent * event);
 };

@@ -349,18 +349,25 @@ SkinDatabase::SkinDatabase(setting_rdb_info_t * rdb_info)
             rdb_worker->moveToThread(&m_rdb_thread);
             connect(&m_rdb_thread, &QThread::finished,
                     rdb_worker, &QObject::deleteLater);
+
             connect(this, &SkinDatabase::prepare_rdb_sig,
                     rdb_worker, &SqlDbRemoteWorker::prepare_rdb);
+            connect(rdb_worker, &SqlDbRemoteWorker::remote_db_prepared_sig,
+                    this, &SkinDatabase::rdb_prepare_ret_handler);
+
             connect(this, &SkinDatabase::write_rdb_sig,
                     rdb_worker, &SqlDbRemoteWorker::write_rdb);
+            connect(rdb_worker, &SqlDbRemoteWorker::remote_db_write_done_sig,
+                    this, &SkinDatabase::remote_db_write_done_handler);
+
             connect(this, &SkinDatabase::close_rdb_sig,
                     rdb_worker, &SqlDbRemoteWorker::close_rdb);
-            connect(rdb_worker, &SqlDbRemoteWorker::remote_db_prepared_sig,
-                    this, &SkinDatabase::rdb_prepare_ret_sig_handler);
+
             connect(this, &SkinDatabase::upload_safe_ldb_sig,
                     rdb_worker, &SqlDbRemoteWorker::upload_safe_ldb_to_rdb);
             connect(rdb_worker, &SqlDbRemoteWorker::upload_safe_ldb_done_sig,
                     this, &SkinDatabase::upload_safe_ldb_done_handler);
+
             m_rdb_thread.start();
             DIY_LOG(LOG_LEVEL::LOG_INFO, "New thead for remote db store started.");
         }
@@ -970,6 +977,7 @@ bool SkinDatabase::store_these_info(db_info_intf_t &info)
     {
         emit write_rdb_sig(m_intf, *m_remote_db_info,
                            m_safe_ldb_dir_str, m_safe_ldb_file_str);
+        emit rdb_write_start_sig();
     }
 
     return ret && ret2;
@@ -986,6 +994,12 @@ bool SkinDatabase::write_remote_db(QSqlDatabase &qdb, db_info_intf_t &intf,
     return write_db(qdb, intf, REMOTE, db_type, use_safe_ldb,
                     safe_ldb_pth_str, safe_ldb_name_str,
                     safe_ldb_conn_name_str,&safe_ldb_ready, &ret_ind);
+}
+
+void SkinDatabase:: remote_db_write_done_handler(SkinDatabase::db_ind_t write_ind,
+                                                 bool ret)
+{
+    emit rdb_write_done_sig(write_ind, ret);
 }
 
 void SkinDatabase::close_dbs(db_ind_t db_ind)
@@ -1005,7 +1019,7 @@ SkinDatabase::rdb_state_t SkinDatabase::remote_db_st()
     return m_rdb_st;
 }
 
-void SkinDatabase::rdb_prepare_ret_sig_handler(bool rdb_p)
+void SkinDatabase::rdb_prepare_ret_handler(bool rdb_p)
 {
     if(rdb_p)
     {
