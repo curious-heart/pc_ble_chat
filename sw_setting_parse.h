@@ -15,7 +15,7 @@ typedef struct _light_info_t
     int flash_gap; /*熄灭后到下一个灯点亮前的间隔时间(ms)*/
     int idx; /*设备内部对灯的编号。从1开始*/
 }light_info_t;
-typedef QMap<int, light_info_t*> light_list_t;
+typedef QList<light_info_t*> light_list_t;
 
 typedef class _ble_dev_info_t
 {
@@ -24,6 +24,7 @@ public:
     QString srv_uuid;
     QString rx_char_uuid, tx_char_uuid;
     QString dev_type;
+    int light_cnt;
     light_list_t light_list;
     int single_light_wait_time;
 
@@ -40,7 +41,7 @@ public:
         light_list_t::iterator it = light_list.begin();
         while(it != light_list.end())
         {
-            delete it.value();
+            delete *it;
             ++it;
         }
         light_list.clear();
@@ -63,7 +64,7 @@ public:
        light_list_t::iterator it = light_list.begin();
        while(it != light_list.end())
        {
-           light_info_t* info = it.value();
+           light_info_t* info = *it;
            qDebug() << "lambda:" << info->lambda << ","
                     << "flash_period:" << info->flash_period << ","
                     << "flash_gap" << info->flash_gap << "\n";
@@ -121,6 +122,6 @@ public:
 }sw_settings_t;
 
 typedef QMap<QString, bool> str_bool_map_t;
-void load_sw_settings(sw_settings_t &sw_s);
+bool load_sw_settings(sw_settings_t &sw_s, bool &valid_e);
 void clear_loaded_settings(sw_settings_t &loaded);
 #endif // SW_SETTING_PARSE_H

@@ -11,7 +11,9 @@
 #define ORID_DEV_DATA_PKT_HDR QByteArray("\x5A\x11")
 #define ORID_DEV_FINISH_PKT_HDR QByteArray("\x5A\xFF\x11\x02")
 #define ORID_DATA_POS_START 8
-#define ORID_DATA_POS_LEN 3
+#define ORID_DATA_BYTES_NUM 3
+#define ORID_LAMBDA_POS_START 3
+#define ORID_LAMBDA_BYTES_NUM 2
 
 #define CLONE_DEV_TYPE_STR QString("clone_dev")
 

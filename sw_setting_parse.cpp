@@ -21,6 +21,7 @@ static inline QString lambda_elem() {return QStringLiteral("lambda");}
 static inline QString flash_period_elem() { return QStringLiteral("flash_period");}
 static inline QString flash_gap_elem() { return QStringLiteral("flash_gap");}
 static inline QString idx_elem() { return QStringLiteral("idx");}
+static inline QString light_count_elem() { return QStringLiteral("light_count");}
 static inline QString single_light_wait_time_elem() { return QStringLiteral("single_light_wait_time");}
 
 static inline QString db_info_elem() { return QStringLiteral("db_info");}
@@ -35,7 +36,7 @@ static inline QString login_pwd_elem() { return QStringLiteral("login_pwd");}
 static inline QString oth_settings_elem() { return QStringLiteral("oth_settings");}
 static inline QString use_remote_db_elem() { return QStringLiteral("use_remote_db");}
 
-typedef bool (*parser_t)(QDomElement &n, sw_settings_t &loaded);
+typedef bool (*parser_t)(QDomElement &n, sw_settings_t &loaded, bool &valid_e);
 typedef QMap<QString, parser_t> str_parser_map_t;
 static bool check_setting_device_info(setting_ble_dev_info_t &dev_info)
 {
@@ -84,107 +85,103 @@ static bool check_setting_db_info(setting_rdb_info_t &db_info)
     return ret;
 }
 
-static bool parse_light_list(QDomElement &e, light_list_t & light_list)
+static bool parse_light_list(QDomElement &e, light_list_t & light_list, bool &valid)
 {
     /*
      * 解析xml文件中light_list元素下的灯信息.
      * @param e: <light_list>...</light_list>
-     * @param light_list: 返回的解析结果。key为lambda（波长）。
+     * @param light_list: 返回的解析结果。
      *
      * @return
-     * true: e中不存在<light>元素；或存在至少一个<light>元素，且所有元素都包含合法的<lambda>元素。
-     *       如果flash_period和flash_gap非法或缺失则使用默认值。但仍返回true。
-     *       非<light>元素会被忽略。
+     * true: 无错误；或者只存在参数非法类错误，已用默认值替代。
      * false：not true。
      * 注意：返回false时，light_list 中已经插入的值在调用者中释放。
+     * valid返回：是否存在非法值。
     */
     QDomElement light_e = e.firstChildElement(light_elem());
-    bool valid = true;
+    bool ok, ret = true;
+    light_info_t * in = nullptr;
+    valid = true;
     while(!light_e.isNull())
     {
+        in = new light_info_t;
+        if(!in)
+        {
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Error: New light_info_t fail!");
+            ret = false;
+            break;
+        }
         QDomNode info_e_n= light_e.namedItem(lambda_elem());
         if(!info_e_n.isNull())
         {
             quint32 lambda_i;
-            bool ok = true;
+            ok = false;
             lambda_i = info_e_n.toElement().text().toUInt(&ok);
             if(ok)
             {
-                light_info_t * in = new light_info_t;
-                if(!in)
-                {
-                    DIY_LOG(LOG_LEVEL::LOG_ERROR, "new light_info_t fail!");
-                    valid = false;
-                    break;
-                }
                 in->lambda = lambda_i;
-
-                ok = false;
-                in->flash_period
-                        = light_e.namedItem(flash_period_elem()).toElement().text().toInt(&ok);
-                if(!ok || in->flash_period > g_max_light_flash_period
-                       || in->flash_period < g_min_light_flash_period)
-                {
-                   DIY_LOG(LOG_LEVEL::LOG_WARN,
-                           "Invlaid %ls in lambda %d: %ls, should be in [%d, %d]. set to default value %d",
-                           flash_period_elem().utf16(),
-                           in->lambda,
-                           light_e.namedItem(flash_period_elem()).toElement().text().utf16(),
-                           g_min_light_flash_period,
-                           g_max_light_flash_period,
-                           g_def_light_flash_period);
-
-                    in->flash_period = g_def_light_flash_period;
-                }
-
-                ok = false;
-                in->flash_gap
-                        = light_e.namedItem(flash_gap_elem()).toElement().text().toInt(&ok);
-                if(!ok || in->flash_gap > g_max_light_flash_gap
-                       || in->flash_gap < g_min_light_flash_gap)
-                {
-                    DIY_LOG(LOG_LEVEL::LOG_WARN,
-                            "Invlaid %ls in lambda %d: %ls, should be in [%d, %d]. set to default value %d",
-                            flash_gap_elem().utf16(),
-                            in->lambda,
-                            light_e.namedItem(flash_gap_elem()).toElement().text().utf16(),
-                            g_min_light_flash_gap,
-                            g_max_light_flash_gap,
-                            g_def_light_flash_gap);
-                    in->flash_gap = g_def_light_flash_gap;
-                }
-
-                ok = false;
-                in->idx = light_e.namedItem(idx_elem()).toElement().text().toInt(&ok);
-                if(!ok)
-                {
-                    DIY_LOG(LOG_LEVEL::LOG_WARN,
-                            "Invlaid %ls in lambda %d: %ls.",
-                            idx_elem().utf16(),
-                            in->lambda,
-                            light_e.namedItem(idx_elem()).toElement().text().utf16());
-                    in->idx = g_min_light_idx_m1;
-                }
-
-                light_list.insert(in->lambda, in);
             }
             else
             {
                 DIY_LOG(LOG_LEVEL::LOG_ERROR, "Invalid lambda:%ls. Must be int",
                         info_e_n.toElement().text().utf16());
+                in->lambda = 0;
                 valid = false;
-                break;
             }
         }
-        else
+
+        ok = false;
+        in->flash_period
+                = light_e.namedItem(flash_period_elem()).toElement().text().toInt(&ok);
+        if(!ok || in->flash_period > g_max_light_flash_period
+               || in->flash_period < g_min_light_flash_period)
         {
-            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Lack of %ls element!", lambda_elem().utf16());
+           DIY_LOG(LOG_LEVEL::LOG_WARN,
+                   "Invlaid %ls: %ls, should be in [%d, %d]. set to default value %d",
+                   flash_period_elem().utf16(),
+                   light_e.namedItem(flash_period_elem()).toElement().text().utf16(),
+                   g_min_light_flash_period,
+                   g_max_light_flash_period,
+                   g_def_light_flash_period);
+
+            in->flash_period = g_def_light_flash_period;
             valid = false;
-            break;
         }
+
+        ok = false;
+        in->flash_gap
+                = light_e.namedItem(flash_gap_elem()).toElement().text().toInt(&ok);
+        if(!ok || in->flash_gap > g_max_light_flash_gap
+               || in->flash_gap < g_min_light_flash_gap)
+        {
+            DIY_LOG(LOG_LEVEL::LOG_WARN,
+                    "Invlaid %ls: %ls, should be in [%d, %d]. set to default value %d",
+                    flash_gap_elem().utf16(),
+                    light_e.namedItem(flash_gap_elem()).toElement().text().utf16(),
+                    g_min_light_flash_gap,
+                    g_max_light_flash_gap,
+                    g_def_light_flash_gap);
+            in->flash_gap = g_def_light_flash_gap;
+            valid = false;
+        }
+
+        ok = false;
+        in->idx = light_e.namedItem(idx_elem()).toElement().text().toInt(&ok);
+        if(!ok)
+        {
+            DIY_LOG(LOG_LEVEL::LOG_WARN,
+                    "Invlaid %ls: %ls. Must be int.",
+                    idx_elem().utf16(),
+                    light_e.namedItem(idx_elem()).toElement().text().utf16());
+            in->idx = g_min_light_idx_m1;
+            valid = false;
+        }
+
+        light_list.append(in);
+
         light_e = light_e.nextSiblingElement(light_elem());
     }
-    return valid ;
+    return ret;
 }
 
 static void take_default_lights(light_list_t &light_list, QString &dev_type)
@@ -209,14 +206,15 @@ static void take_default_lights(light_list_t &light_list, QString &dev_type)
         in->flash_gap= g_def_light_flash_gap;
         in->idx = i+1;
 
-        light_list.insert(in->lambda, in);
+        light_list.append(in);
     }
 }
 
-static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
+static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded, bool &valid_e)
 {
     QDomElement dev_e = e.firstChildElement();
     bool dev_empty_flag = true, valid_light_list = true;
+    valid_e = true;
     while(!dev_e.isNull())
     {
         if(dev_e.tagName() == dev_elem())
@@ -252,7 +250,7 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
                 }
                 else if(info_e.tagName() == light_list_elem())
                 {
-                    valid_light_list = parse_light_list(info_e, dev_info->light_list);
+                    valid_light_list = parse_light_list(info_e, dev_info->light_list, valid_e);
                     if(!valid_light_list)
                     {
                         dev_info->clear_light_list();
@@ -260,12 +258,29 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
                 }
                 else if(info_e.tagName() == single_light_wait_time_elem())
                 {
-                   bool ok;
-                   dev_info->single_light_wait_time = info_e.text().toInt(&ok);
-                   if(!ok)
-                   {
-                       dev_info->single_light_wait_time = g_def_single_light_wait_time;
-                   }
+                    bool ok;
+                    dev_info->single_light_wait_time = info_e.text().toInt(&ok);
+                    if(!ok)
+                    {
+                        dev_info->single_light_wait_time = g_def_single_light_wait_time;
+                    }
+                    else
+                    {
+                        valid_e = false;
+                    }
+                }
+                else if(info_e.tagName() == light_count_elem())
+                {
+                    bool ok;
+                    dev_info->light_cnt = info_e.text().toInt(&ok);
+                    if(!ok)
+                    {
+                        dev_info->light_cnt = 0;
+                    }
+                    else
+                    {
+                        valid_e = false;
+                    }
                 }
                 else
                 {
@@ -285,11 +300,12 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
                     dev_info->dev_type = CLONE_DEV_TYPE_STR;
                 }
 
-                if(dev_info->light_list.isEmpty())
+                if((dev_info->light_cnt <= 0) && dev_info->light_list.isEmpty())
                 {//fill in default lights.
                     DIY_LOG(LOG_LEVEL::LOG_INFO,
                             "Light is is taken as empty in xml file, use default light list.");
                     take_default_lights(dev_info->light_list, dev_info->dev_type);
+                    dev_info->light_cnt = dev_info->light_list.count();
                 }
 
                 loaded.ble_dev_list.insert(dev_info->addr, dev_info);
@@ -298,7 +314,8 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
             else
             {
                 DIY_LOG(LOG_LEVEL::LOG_WARN,
-                        "Invalid device information in %ls. This device is ignored.",
+                        "Invalid device information in %ls, or soem fatal error exists."
+                        "This device is ignored.",
                         dev_info->addr.utf16());
                 delete dev_info;
             }
@@ -314,8 +331,8 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded)
     if(dev_empty_flag)
     {
         DIY_LOG(LOG_LEVEL::LOG_WARN,
-                "No valid device infomation element found! Use default device:\n\
-addr: %s\n, srv_uuid: %s\n, tx_char: %s, rx_char: %s\n",
+                "No valid device infomation element found! Use default device:\n"
+                "addr: %s\n, srv_uuid: %s\n, tx_char: %s, rx_char: %s\n",
                 g_def_ble_dev_addr,
                 g_def_ble_srv_uuid,
                 g_def_ble_tx_char_uuid,
@@ -328,10 +345,11 @@ addr: %s\n, srv_uuid: %s\n, tx_char: %s, rx_char: %s\n",
     }
 }
 
-static bool parse_db_info(QDomElement &e, sw_settings_t &loaded)
+static bool parse_db_info(QDomElement &e, sw_settings_t &loaded, bool &valid_e)
 {
     QDomElement info_e = e.firstChildElement();
 
+    valid_e = true;
     while(!info_e.isNull())
     {
         if(info_e.tagName() == srvr_addr_elem())
@@ -378,10 +396,11 @@ static bool check_setting_oth_settings(setting_oth_t &/*oth_info*/)
     return true;
 }
 
-static bool parse_oth_settings(QDomElement &e, sw_settings_t &loaded)
+static bool parse_oth_settings(QDomElement &e, sw_settings_t &loaded, bool &valid_e)
 {
     QDomElement info_e = e.firstChildElement();
     bool ret = false;
+    valid_e = true;
     while(!info_e.isNull())
     {
         if(info_e.tagName() == use_remote_db_elem())
@@ -415,7 +434,7 @@ static str_parser_map_t &init_sw_settings_xml_parser(str_bool_map_t & ret)
     return xml_parser;
 }
 
-static str_bool_map_t& load_sw_settings_from_xml(sw_settings_t &loaded)
+static str_bool_map_t& load_sw_settings_from_xml(sw_settings_t &loaded, bool& valid_e)
 {
     QFile xml_file(g_settings_xml_fpn);
     QDomDocument doc;
@@ -434,10 +453,11 @@ static str_bool_map_t& load_sw_settings_from_xml(sw_settings_t &loaded)
     }
     xml_file.close();
 
-
     QDomElement docElem = doc.documentElement();
     QDomElement c_e = docElem.firstChildElement();
     bool ret = false;
+    bool valid_one_e = true;
+    valid_e = true;
     while(!c_e.isNull())
     {
         ret = false;
@@ -445,7 +465,8 @@ static str_bool_map_t& load_sw_settings_from_xml(sw_settings_t &loaded)
         parser_t parser = parser_map.value(key, nullptr);
         if(parser)
         {
-            ret = parser(c_e, loaded);
+            ret = parser(c_e, loaded, valid_one_e);
+            valid_e = valid_e && valid_one_e;
         }
         xml_parse_result[key] = ret;
 
@@ -477,13 +498,15 @@ static void insert_def_dev_item(sw_settings_t &sw_s)
     ble_dev->tx_char_uuid = QString(g_def_ble_tx_char_uuid);
     ble_dev->dev_type = CLONE_DEV_TYPE_STR;
     take_default_lights(ble_dev->light_list, ble_dev->dev_type);
+    ble_dev->light_cnt = ble_dev->light_list.count();
     ble_dev->single_light_wait_time = g_def_single_light_wait_time;
     sw_s.ble_dev_list.insert(ble_dev->addr, ble_dev);
 }
 
-void load_sw_settings(sw_settings_t &sw_s)
+bool load_sw_settings(sw_settings_t &sw_s, bool &valid_e)
 {
-    str_bool_map_t &pt_ret = load_sw_settings_from_xml(sw_s);
+    bool ret = true;
+    str_bool_map_t &pt_ret = load_sw_settings_from_xml(sw_s, valid_e);
     str_bool_map_t::iterator it = pt_ret.begin();
 
     //xml_parse_result is now filled, check it now:
@@ -511,6 +534,7 @@ void load_sw_settings(sw_settings_t &sw_s)
             {
                 sw_s.oth_settings.use_remote_db = g_def_use_remote_db;
             }
+            ret = false;
         }
         ++it;
     }
@@ -529,29 +553,45 @@ void load_sw_settings(sw_settings_t &sw_s)
     //check single_light_wait_time and fill light idx.
     QMap<QString, setting_ble_dev_info_t*>::Iterator dev_it = sw_s.ble_dev_list.begin();
     light_list_t::Iterator light_it;
-    int w_t, cur_v, pre_light_idx;
+    int w_t, cur_v;
     while(dev_it != sw_s.ble_dev_list.end())
     {
         light_it = dev_it.value()->light_list.begin();
         w_t = dev_it.value()->single_light_wait_time;
-        pre_light_idx = g_min_light_idx_m1;
         while(light_it != dev_it.value()->light_list.end())
         {
-            cur_v = (light_it.value()->flash_period + light_it.value()->flash_gap) * 2;
+            cur_v = ((*light_it)->flash_period + (*light_it)->flash_gap) * 2;
             if(w_t < cur_v) { w_t = cur_v;}
-            if(light_it.value()->idx <= g_min_light_idx_m1)
+            if((*light_it)->idx <= g_min_light_idx_m1)
             {
-                light_it.value()->idx = pre_light_idx + 1;
+                (*light_it)->idx = g_min_light_idx_m1 + 1;
             }
-            pre_light_idx = light_it.value()->idx;
-            /*
-            DIY_LOG(LOG_LEVEL::LOG_INFO, "lambda:%d, idx: %d",
-                    light_it.value()->lambda, light_it.value()->idx);
-                    */
             ++light_it;
         }
         dev_it.value()->single_light_wait_time = w_t;
-        //DIY_LOG(LOG_LEVEL::LOG_INFO, "wait time:%d", dev_it.value()->single_light_wait_time);
+
+        int need_add = dev_it.value()->light_cnt - dev_it.value()->light_list.count();
+        int last_idx = dev_it.value()->light_list.last()->idx + 1;
+        if(need_add > 0)
+        {
+            for(int idx=0; idx < need_add; idx++)
+            {
+                light_info_t * in = new light_info_t;
+                assert(in != nullptr);
+                in->lambda = 0;
+                in->flash_period = g_def_light_flash_period;
+                in->flash_gap= g_def_light_flash_gap;
+                in->idx = last_idx + idx;
+
+                dev_it.value()->light_list.append(in);
+            }
+        }
+        else
+        {
+            dev_it.value()->light_cnt = dev_it.value()->light_list.count();
+        }
         ++dev_it;
     }
+
+    return ret;
 }

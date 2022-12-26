@@ -116,7 +116,13 @@ Chat::Chat(QWidget *parent)
     //! [Get local device name]
 
     //try to load settings from xml.
-    load_sw_settings(m_sw_settings);
+    bool valid_e;
+    load_sw_settings(m_sw_settings, valid_e);
+    if(!valid_e)
+    {
+        QString err = "配置文件内存在非法内容，已启用默认设置。请查看Log确认。";
+        ui->stateIndTextEdit->setText(err);
+    }
     //new db management object.
     //chat only manages m_skin_db, and the latter manages remote db and thread.
     if(m_sw_settings.oth_settings.use_remote_db)
@@ -630,7 +636,7 @@ void Chat::start_send_data_to_device(bool single_cmd)
             m_single_light_write = false;
             m_curr_light_no = m_work_dev_info->light_list.begin();
             gen_pkt_ok = ble_comm_gen_app_light_pkt(bytes_to_send,
-                                       m_curr_light_no.value()->idx, m_work_dev_info->dev_type);
+                                       (*m_curr_light_no)->idx, m_work_dev_info->dev_type);
         }
 
         if(gen_pkt_ok)
@@ -694,7 +700,10 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
     QString val_p_prf = " value:";
     QByteArray data
             = QByteHexString(QByteArray(&(value.constData()[ORID_DATA_POS_START]),
-                                 ORID_DATA_POS_LEN), "").toUtf8();
+                                 ORID_DATA_BYTES_NUM), "").toUtf8();
+    QByteArray lambda_value
+            = QByteHexString(QByteArray(&(value.constData()[ORID_LAMBDA_POS_START]),
+                                 ORID_LAMBDA_BYTES_NUM), "").toUtf8();
 
     str = QByteHexString(value);
     utf8_str = str + "\r\n";
@@ -713,7 +722,8 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
             ui->chat->insertPlainText(utf8_str);
         }
         SkinDatabase::db_lambda_data_s_t ld;
-        ld.lambda = m_curr_light_no.value()->lambda;
+        //ld.lambda = m_curr_light_no.value()->lambda;
+        ld.lambda = lambda_value.toUInt(nullptr, 16);
         ld.data = data.toULongLong(nullptr, 16);
         m_db_data.lambda_data.append(ld);
         val_p_prf.prepend("***");
@@ -759,7 +769,7 @@ void Chat::turn_on_next_light(light_list_t::Iterator no)
     {
         QByteArray bytes_to_send;
         bool gen_pkt_ok =  ble_comm_gen_app_light_pkt(bytes_to_send,
-                                                      m_curr_light_no.value()->idx,
+                                                      (*m_curr_light_no)->idx,
                                                       m_work_dev_info->dev_type);
         if(gen_pkt_ok)
         {
@@ -839,8 +849,8 @@ void Chat::write_data_done_handle(bool done)
                 non_empty = false;
             }
             err = QString("超时，未收到波长=%1，idx=%2的灯光数据。结束！").\
-                    arg(m_curr_light_no.value()->lambda).\
-                    arg(m_curr_light_no.value()->idx);
+                    arg((*m_curr_light_no)->lambda).\
+                    arg((*m_curr_light_no)->idx);
         }
         title = "!!!";
     }

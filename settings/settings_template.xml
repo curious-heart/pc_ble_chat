@@ -1,23 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--说明
-    <ble_dev_list> 如果最终所有<dev>都不可用，则会使用软件内置默认的device信息。
+    <ble_dev_list> 如果最终所有<dev>都不可用，则会使用APP软件内置默认的device信息。
 	<dev>
-	    <dev_id>original_dev</dev_id> 可选。如果不指定，软件会请用户设置或自动生成。
+	    <dev_type>original_dev</dev_type> 可选。如果不指定，APP软件会请用户设置或自动生成。
 	    <addr>27:A5:D2:1E:67:DD</addr> 必须存在且合法，否则此<dev>会被抛弃。
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid> 同<addr>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char> 同<addr>
 	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char> 同<addr>
-	    <light_list> 可以不存在或为空。此时使用默认的light_list。
-		<light> 
-		    <lambda>354</lambda>  波长(nm)。必须存在且合法，否则整个<dev>会被抛弃。
+	    <light_count>19</light_count> 灯的数量。可选存在。APP内有默认值（参考原始设备）。如果这个值与<light_list>中<light>元素的数量相冲突，则以较大者为准。
+	    <light_list> 灯列表。可以不存在或为空。如果下挂的<light>元素数量与<light_count>相冲突，以较大者为准。
+    注：一个<light>表示APP软件向device下发一条“点亮”的指令。因此<light>中的<idx>可以重复，表示多次点亮同一个灯。如果<light>元素数量少于<light_count>，多出来的light的idx会以指定的最大的idx+1开始向后递增。
+		<light> 可以不存在。如果存在，必须包含合法的idx元素。
+		    <idx>1</idx> 设备内部对灯的编号。编号从1开始。可以重复。不存在或非法值会被视为1。
 		    <flash_period>500</flash_period> 一个灯点亮的时长(ms)。可以不存在或非法，此时会使用默认值。
 		    <flash_gap>10</flash_gap> 一个灯熄灭后到下一个灯点亮的时间间隔(ms)。同<flash_period>
+		    <lambda>354</lambda>  波长(nm)。可选存在。非法值视为0。暂未使用。
 		</light>
 	    </light_list>
-	</dev>
+	    等待一个灯的数据的最长时间（ms）。可选。APP软件内部有默认值。如果设置，应该比max(flash_period + flash_gap)*2要大，否则会强制设置为这个值。
+	    <single_light_wait_time>1000</single_light_wait_time> 
+    </dev>
     </ble_dev_list>
 
-    <db_info> 如果不存在或信息不合法，会使用软件内置默认的信息。
+    <db_info> 如果不存在或信息不合法，会使用APP软件内置默认的信息。
 	<srvr_addr>li371359001.vicp.net</srvr_addr> 必须存在，否则<db_info>会被抛弃。
 	<srvr_port>3306</srvr_port> 同<srvr_addr>
 	<dbms_name>MySQL</dbms_name> 可选。
@@ -27,7 +32,7 @@
 	<login_pwd>admin123</login_pwd> 可选。
     </db_info>
 
-    <oth_settings> 如果不存在或信息不合法，会使用软件内置默认的信息。
+    <oth_settings> 如果不存在或信息不合法，会使用APP软件内置默认的信息。
 	<use_remote_db>1</use_remote_db> 可选。
     </oth_settings>
 -->
@@ -35,16 +40,17 @@
 <cfg_info>
     <ble_dev_list>
 	<dev>
-	    <dev_id>original_dev</dev_id>
+	    <dev_type>original_dev</dev_type>
 	    <addr>27:A5:D2:1E:67:DD</addr>
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
 	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
 	    <light_list> <!-- 灯列表 -->
 		<light>
-		    <lambda>354</lambda> <!-- 波长(nm).必选 -->
-		    <flash_period>500</flash_period> <!-- 一个灯点亮的时长(ms).可选-->
-		    <flash_gap>10</flash_gap>  <!-- 一个灯熄灭后到下一个灯点亮的时间间隔. 可选-->
+		    <lambda>354</lambda> 
+		    <flash_period>500</flash_period> 
+		    <flash_gap>10</flash_gap>  
+		    <idx>1</idx>
 		</light>
 		<light>
 		    <lambda>376</lambda>
@@ -129,9 +135,10 @@
 		    <flash_gap>10</flash_gap>
 		</light>
 	    </light_list>
+	    <single_light_wait_time>1500</single_light_wait_time>
 	</dev>
 	<dev>
-	    <dev_id>colone_1</dev_id>
+	    <dev_type>clone_dev</dev_type>
 	    <addr>1E:A2:CA:1E:67:DD</addr>
 	    <!--
 	    <srv_uuid>0000fff0-0000-1000-8000-00805f9b34fb</srv_uuid>
@@ -144,8 +151,7 @@
 	    <light_list>
 		<light>
 		    <lambda>560</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
+		    <idx>6</idx>
 		</light>
 		<light>
 		    <lambda>600</lambda>
@@ -160,6 +166,7 @@
 	    </light_list>
         </dev>
 	<dev>
+	    <dev_type>clone_dev</dev_type>
 	    <addr>33:BD:CA:1E:67:DD</addr>
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
@@ -178,8 +185,7 @@
 	</dev>
 
 	<dev>
-	    <dev_id>colone_2</dev_id>
-	    <addr>33:BD:CA:1E:67:DD</addr>
+	    <addr>43:BD:CA:1E:67:DD</addr>
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
 	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
