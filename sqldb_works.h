@@ -130,7 +130,7 @@ public:
                                    QSqlError &cur_sql_err,
                                    QString tbl_name, QString cmd, db_type_t db_type);
     void close_dbs(db_ind_t db_ind);
-    static void safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &rdb,
+    static bool safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &rdb,
                                       QList<SkinDatabase::tbl_rec_op_result_t>& op_result);
 
     rdb_state_t remote_db_st();
@@ -145,11 +145,13 @@ signals:
     bool close_rdb_sig(SkinDatabase::db_ind_t db_ind);
     void upload_safe_ldb_sig(QString safe_ldb_fpn);
     void rdb_state_upd_sig(SkinDatabase::rdb_state_t rdb_st); //send signal to chat.
-    void upload_safe_ldb_end_sig(QList<SkinDatabase::tbl_rec_op_result_t> op_result);
+    void upload_safe_ldb_end_sig(QList<SkinDatabase::tbl_rec_op_result_t> op_result,
+                                 bool result_ret);
 public slots:
     /*handle signal from remote worker.*/
     void rdb_prepare_ret_sig_handler(bool rdb_p);
-    void upload_safe_ldb_done_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result);
+    void upload_safe_ldb_done_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result,
+                                      bool result_ret);
 private:
     QThread m_rdb_thread;
 };

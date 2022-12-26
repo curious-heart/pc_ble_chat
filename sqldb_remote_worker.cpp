@@ -174,38 +174,59 @@ bool SqlDbRemoteWorker::close_rdb(SkinDatabase::db_ind_t db_ind)
 bool SqlDbRemoteWorker::upload_safe_ldb_to_rdb(QString safe_ldb_fpn)
 {
     bool ret = true;
-    QSqlDatabase safe_ldb, rdb;
-
-    safe_ldb = QSqlDatabase::addDatabase(QString("QSQLITE"),
-                                         UPLOAD_SAFE_LDB_CONN_NAME);
-    if(!safe_ldb.isValid())
-    {
-        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Add database safe ldb %ls error!!!",
-                UPLOAD_SAFE_LDB_CONN_NAME.utf16());
-        return false;
-    }
-    safe_ldb.setDatabaseName(safe_ldb_fpn);
-    safe_ldb.open();
-    if(!safe_ldb.isOpen())
-    {
-        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Open database safe ldb %ls error!!!",
-                safe_ldb_fpn.utf16());
-        return false;
-    }
-
-    /*Remote db should have been prepared before reach here.*/
-    if(!m_remote_db_ready)
-    {
-        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Remote not prepared, can't upload safe ldb!");
-        safe_ldb.close();
-        QSqlDatabase::removeDatabase(UPLOAD_SAFE_LDB_CONN_NAME);
-        return false;
-    }
-    rdb = QSqlDatabase::database(REMOTE_DB_CONN_NAME);
-
     QList<SkinDatabase::tbl_rec_op_result_t> op_result;
-    SkinDatabase::safe_ldb_to_remote_db(safe_ldb, rdb, op_result);
 
-    emit upload_safe_ldb_done_sig(op_result);
+    op_result.clear();
+    while(true)
+    {
+        QSqlDatabase safe_ldb, rdb;
+
+        safe_ldb = QSqlDatabase::addDatabase(QString("QSQLITE"),
+                                             UPLOAD_SAFE_LDB_CONN_NAME);
+        if(!safe_ldb.isValid())
+        {
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Add database safe ldb %ls error!!!",
+                    UPLOAD_SAFE_LDB_CONN_NAME.utf16());
+            ret = false;
+            break;
+        }
+        safe_ldb.setDatabaseName(safe_ldb_fpn);
+        safe_ldb.open();
+        if(!safe_ldb.isOpen())
+        {
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Open database safe ldb %ls error!!!",
+                    safe_ldb_fpn.utf16());
+            ret = false;
+            break;
+        }
+
+        /*Remote db should have been prepared before reach here.*/
+        if(!m_remote_db_ready)
+        {
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Remote not prepared, can't upload safe ldb!");
+            safe_ldb.close();
+            ret = false;
+            break;
+        }
+        rdb = QSqlDatabase::database(REMOTE_DB_CONN_NAME);
+
+        ret = SkinDatabase::safe_ldb_to_remote_db(safe_ldb, rdb, op_result);
+        safe_ldb.close();
+
+        break;
+    }
+
+    QSqlDatabase::removeDatabase(UPLOAD_SAFE_LDB_CONN_NAME);
+    if(ret)
+    {
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "All recoreds in safe ldb has been upload to remote db, now delete the safe ldb file.");
+        QFile sldbf(safe_ldb_fpn);
+        ret = sldbf.remove();
+        if(!ret)
+        {
+            DIY_LOG(LOG_LEVEL::LOG_WARN, "Delete safe ldb file error! PLease delete it manually later.");
+        }
+    }
+    emit upload_safe_ldb_done_sig(op_result, ret);
     return ret;
 }

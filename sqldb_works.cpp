@@ -1023,9 +1023,10 @@ void SkinDatabase::upload_safe_ldb(QString safe_ldb_fpn)
     emit upload_safe_ldb_sig(safe_ldb_fpn);
 }
 
-void SkinDatabase::upload_safe_ldb_done_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result)
+void SkinDatabase::upload_safe_ldb_done_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result,
+                                                bool result_ret)
 {
-    emit upload_safe_ldb_end_sig(op_result);
+    emit upload_safe_ldb_end_sig(op_result, result_ret);
 }
 
 static void get_sql_select_helper(QMap<QString, void*> &pointer,
@@ -1058,7 +1059,7 @@ static void get_sql_select_helper(QMap<QString, void*> &pointer,
     pointer.insert(m_tbl_datum_str + "." + m_col_expt_id_str, &intf.expt_id);
 }
 
-void SkinDatabase::safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &rdb,
+bool SkinDatabase::safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &rdb,
                                          QList<SkinDatabase::tbl_rec_op_result_t>& op_result)
 {
     typedef struct
@@ -1077,7 +1078,7 @@ void SkinDatabase::safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &r
     QMap<QString, void*> helper;
     db_info_intf_t intf;
     QSqlQuery safe_ldb_q(safe_ldb);
-    bool ret = true;
+    bool ret = true, result_ret = true;
     db_lambda_data_s_t lambda_data_p;
     bool one_data_item = false;
     SkinDatabase::tbl_rec_op_result_t tbl_op_ret;
@@ -1097,6 +1098,8 @@ void SkinDatabase::safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &r
         safe_ldb_q.exec(cmd);
         while(safe_ldb_q.next())
         {
+            intf.lambda_data.clear();
+            intf.dev_changed = intf.obj_changed = intf.expt_changed = false;
             if(m_tbl_datum_str == tbl_name)
             {
                 one_data_item = false;
@@ -1163,7 +1166,7 @@ void SkinDatabase::safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &r
                     DIY_LOG(LOG_LEVEL::LOG_WARN,
                             "Record has been written into remote db,"
                             "but the following command to delete it from safe ldb fails:\n%ls\n"
-                            "Please delete it manually to avoid redundant records in remote db when you perform other upload using this safe ldb file.",
+                            "If the safe ldb file is not deleted automatically, please delete it manually to avoid redundant records in remote db when you perform other upload using this safe ldb file.",
                             cmd.utf16());
                 }
                 else
@@ -1180,7 +1183,9 @@ void SkinDatabase::safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &r
         tbl_op_ret.rec_cnt = tbl_op_ret.rec_fail + tbl_op_ret.rec_part_succ
                             + tbl_op_ret.rec_succ;
         op_result.append(tbl_op_ret);
+        result_ret = result_ret && (tbl_op_ret.rec_fail == 0);
     }
+    return result_ret;
 }
 ////////////////////////////////////////////////////////////////
 void remove_qt_sqldb_conn(QString conn_name)

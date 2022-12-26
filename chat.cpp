@@ -1167,10 +1167,14 @@ void Chat::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
-void Chat::upload_safe_ldb_end_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result)
+void Chat::upload_safe_ldb_end_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result,
+                                       bool result_ret)
 {
+    m_remote_db_wait_box.hide();
+
     m_upload_safe_ldb_now = false;
     QString result_str = QString("Upload result:\n");
+    int fail_cnt = 0;
 
     foreach(const SkinDatabase::tbl_rec_op_result_t &tbl_ret, op_result)
     {
@@ -1179,6 +1183,23 @@ void Chat::upload_safe_ldb_end_handler(QList<SkinDatabase::tbl_rec_op_result_t> 
                 .arg(tbl_ret.rec_succ).arg(tbl_ret.rec_fail)
                 .arg(tbl_ret.rec_part_succ).arg(tbl_ret.rec_cnt);
         result_str += s;
+        fail_cnt += tbl_ret.rec_fail;
+    }
+    if(0 == fail_cnt)
+    {
+        result_str += "All records in safe ldb has been upload to remote db!\n";
+        if(result_ret)
+        {
+            result_str += "And the safe ldb file has been deleted.\n";
+        }
+        else
+        {
+            result_str += "But fails to delete the safe ldb file. PLease delete it manually.\n";
+        }
+    }
+    if(result_ret)
+    {
+        result_str += "Not all records are uploaded to remote db. Please check log file.\n";
     }
     QMessageBox::information(nullptr, "Result", result_str);
 }
@@ -1197,6 +1218,12 @@ void Chat::select_safe_ldb_for_upload()
 
         m_safe_ldb_for_upload_fpn = fpn;
         m_skin_db->upload_safe_ldb(m_safe_ldb_for_upload_fpn);
+
+        m_remote_db_wait_box.setText("Uploading...");
+        m_remote_db_wait_box.setStandardButtons(QMessageBox::NoButton);
+        m_remote_db_wait_box.setWindowFlags(Qt::FramelessWindowHint | Qt::CustomizeWindowHint);
+        m_remote_db_wait_box.setWindowModality(Qt::NonModal);
+        m_remote_db_wait_box.show();
     }
 }
 
@@ -1233,7 +1260,6 @@ void Chat::on_uploadLdbPB_clicked()
     {
         m_skin_db->prepare_remote_db();
 
-        QMessageBox msgBox;
         m_remote_db_wait_box.setText("Remote db preparing...");
         m_remote_db_wait_box.setStandardButtons(QMessageBox::NoButton);
         m_remote_db_wait_box.setWindowFlags(Qt::FramelessWindowHint | Qt::CustomizeWindowHint);
