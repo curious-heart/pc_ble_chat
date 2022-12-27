@@ -677,17 +677,9 @@ bool SkinDatabase::prepare_safe_ldb(QString db_pth, QString db_name, QString tbl
  * This functon may be invoked from multi threads, so it should be thread safe.
 */
 bool SkinDatabase::db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
-                                      QSqlError &cur_sql_err,
-                                      QString tbl_name, QString cmd, db_type_t db_type)
+                                   QSqlError &cur_sql_err, QString &cur_cmd,
+                                   QString &tbl_name, db_type_t db_type)
 {
-    QMap<QString, QString> upd_clau_list =
-    {
-       {m_tbl_expts_str, _FORCE_UPD_TBL_EXPTS_CLAU_(intf, db_type)},
-       {m_tbl_objects_str, _FORCE_UPD_TBL_OBJECTS_CLAU_(intf, db_type)},
-       {m_tbl_devices_str, _FORCE_UPD_TBL_DEVICES_CLAU_(intf, db_type)},
-    };
-    QString upd_clau = "";
-    QSqlQuery query(qdb);
     QSqlError sql_err;
     QString sqlerr_str;
     quint32 cur_err_code = cur_sql_err.nativeErrorCode().toUInt();
@@ -710,21 +702,82 @@ bool SkinDatabase::db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
     }
     if(dup)
     {
+        /*
+         * First, select this item from db
+        */
+        db_info_intf_t db_intf;
+        QMap<QString, void*> new_val_helper, db_val_helper;
+        const tbl_name_cols_map_t* tbl_name_cols_map;
+        tbl_name_cols_map = get_tbl_name_cols_map(tbl_name);
+        if(nullptr ==  tbl_name_cols_map)
+        {
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Error: get_tbl_name_cols_map fail!!");
+            return false;
+        }
+        get_sql_select_helper(new_val_helper, intf, tbl_name);
+        QString p_k_val = *(QString*)(new_val_helper[tbl_name+"."+tbl_name_cols_map->primary_id_str]);
+        QString select_cmd =
+                QString("SELECT %1 FROM %2 WHERE %3=\"%4\";")
+                .arg(tbl_name_cols_map->tbl_cols, tbl_name,
+                     tbl_name_cols_map->primary_id_str,p_k_val);
+        QSqlQuery sel_q(qdb);
+        ret = sel_q.exec(select_cmd);
+        if(!ret)
+        {
+            sql_err = sel_q.lastError();
+            sqlerr_str = SQL_LAST_ERR_STR(sql_err);
+            DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                    "Select from table %ls in %ls fail!!!"
+                    "Cmd:%ls\nsql err info: %ls",
+                    tbl_name.utf16(), qdb.databaseName().utf16(),
+                    select_cmd.utf16(), sqlerr_str.utf16());
+            return false;
+        }
+        get_sql_select_helper(db_val_helper, db_intf, tbl_name);
+        QStringList col_list = tbl_name_cols_map->tbl_cols.split(",");
+        fill_intf_from_sql_query_record(tbl_name,
+                                        col_list,
+                                        sel_q,
+                                        db_val_helper,
+                                        tbl_name_cols_map->primary_id_str);
+        /*
+         * Second, append new value to current value in db.
+        */
+        merge_two_db_intf(db_intf, intf);
+
+        /*
+         * Then, use the merged value to update db.
+        */
+        QMap<QString, QString> insert_tbl_cmds =
+        {
+           {m_tbl_expts_str, _INSERT_TBL_EXPTS_CMD_(db_intf, db_type)},
+           {m_tbl_objects_str, _INSERT_TBL_OBJECTS_CMD_(db_intf, db_type)},
+           {m_tbl_devices_str, _INSERT_TBL_DEVICES_CMD_(db_intf, db_type)}
+        };
+        QMap<QString, QString> upd_clau_list =
+        {
+           {m_tbl_expts_str, _FORCE_UPD_TBL_EXPTS_CLAU_(db_intf, db_type)},
+           {m_tbl_objects_str, _FORCE_UPD_TBL_OBJECTS_CLAU_(db_intf, db_type)},
+           {m_tbl_devices_str, _FORCE_UPD_TBL_DEVICES_CLAU_(db_intf, db_type)},
+        };
+        QString ins_cmd = "", upd_clau = "";
+        ins_cmd= insert_tbl_cmds[tbl_name];
         upd_clau = upd_clau_list[tbl_name];
-        if(upd_clau.isEmpty())
+        if(ins_cmd.isEmpty() || upd_clau.isEmpty())
         {
             DIY_LOG(LOG_LEVEL::LOG_INFO,
                     "Insert but duplicate,cmd:%ls\n"
                     "And, this table has no update clause, so can't insert!",
-                    cmd.utf16());
+                    ins_cmd.utf16());
             return false;
         }
         DIY_LOG(LOG_LEVEL::LOG_INFO,
-                "Insert but duplicate,cmd:%ls\nNow try updating!", cmd.utf16());
+                "Insert but duplicate,cmd:%ls\nNow try updating!", ins_cmd.utf16());
         /*update*/
-        cmd.remove(";");
-        cmd += " " +  upd_clau + ";";
-        ret = query.exec(cmd);
+        ins_cmd.remove(";");
+        ins_cmd += " " +  upd_clau + ";";
+        QSqlQuery query(qdb);
+        ret = query.exec(ins_cmd);
         if(!ret)
         {
             sql_err = query.lastError();
@@ -733,7 +786,7 @@ bool SkinDatabase::db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
                    "Update table %ls in db %ls fail!!!\n"
                    "Cmd:%ls\nsql err info: %ls",
                    tbl_name.utf16(), qdb.databaseName().utf16(),
-                   cmd.utf16(), sqlerr_str.utf16());
+                   ins_cmd.utf16(), sqlerr_str.utf16());
         }
     }
     else
@@ -742,8 +795,8 @@ bool SkinDatabase::db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
         DIY_LOG(LOG_LEVEL::LOG_ERROR,
                 "Insert table %ls in db %ls fail!!!\n"
                 "Cmd:%ls\nsql err info: %ls",
-               tbl_name.utf16(), qdb.databaseName().utf16(),
-                cmd.utf16(), sqlerr_str.utf16());
+                tbl_name.utf16(), qdb.databaseName().utf16(),
+                cur_cmd.utf16(), sqlerr_str.utf16());
     }
     return ret;
 }
@@ -852,7 +905,7 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
             if(!ret)
             {
                 sql_err = query.lastError();
-                ret = db_ins_err_process(qdb, intf, sql_err, name, cmd, db_type);
+                ret = db_ins_err_process(qdb, intf, sql_err, cmd, name, db_type);
                 if(!ret && (REMOTE == db_pos) && use_safe_ldb)
                 {
                     DIY_LOG(LOG_LEVEL::LOG_ERROR, "Insert remote db error."
@@ -874,8 +927,8 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                         if(!ret)
                         {
                             sql_err = safe_ldb_q.lastError();
-                            ret = db_ins_err_process(safe_ldb, intf, sql_err,
-                                                     name, cmd, db_type);
+                            ret = db_ins_err_process(safe_ldb, intf, sql_err, cmd,
+                                                     name, db_type);
                             if(!ret)
                             {
                                 DIY_LOG(LOG_LEVEL::LOG_ERROR,
@@ -1043,62 +1096,203 @@ void SkinDatabase::upload_safe_ldb_done_handler(QList<SkinDatabase::tbl_rec_op_r
     emit upload_safe_ldb_end_sig(op_result, result_ret);
 }
 
-static void get_sql_select_helper(QMap<QString, void*> &pointer,
-                                  SkinDatabase::db_info_intf_t &intf)
+void SkinDatabase::merge_two_db_intf(db_info_intf_t &drawer, db_info_intf_t &sender,
+                              QString tbl_name)
 {
-    pointer.insert(m_tbl_expts_str, &intf.expt_changed);
-    pointer.insert(m_tbl_expts_str + "." + m_col_expt_id_str, &intf.expt_id);
-    pointer.insert(m_tbl_expts_str + "." + m_col_desc_str, &intf.expt_desc);
-    pointer.insert(m_tbl_expts_str + "." + m_col_date_str, &intf.expt_date);
-    pointer.insert(m_tbl_expts_str + "." + m_col_time_str, &intf.expt_time);
+    QString sep = QString("\n********\n");
 
-    pointer.insert(m_tbl_objects_str, &intf.obj_changed);
-    pointer.insert(m_tbl_objects_str + "." + m_col_obj_id_str, &intf.obj_id);
-    pointer.insert(m_tbl_objects_str + "." + m_col_skin_type_str, &intf.skin_type);
-    pointer.insert(m_tbl_objects_str + "." + m_col_desc_str, &intf.obj_desc);
+    if(tbl_name.isEmpty() || m_tbl_expts_str == tbl_name)
+    {
+        drawer.expt_desc += sep + sender.expt_desc;
+        drawer.expt_date += sep + sender.expt_date;
+        drawer.expt_time += sep + sender.expt_time;
+    }
 
-    pointer.insert(m_tbl_devices_str, &intf.dev_changed);
-    pointer.insert(m_tbl_devices_str + "." + m_col_dev_id_str, &intf.dev_id);
-    pointer.insert(m_tbl_devices_str + "." + m_col_dev_addr_str, &intf.dev_addr);
-    pointer.insert(m_tbl_devices_str + "." + m_col_desc_str, &intf.dev_desc);
+    if(tbl_name.isEmpty() || m_tbl_objects_str == tbl_name)
+    {
+        drawer.skin_type += sep + sender.skin_type;
+        drawer.obj_desc += sep + sender.obj_desc;
+    }
 
-    pointer.insert(m_tbl_datum_str, nullptr);
-    pointer.insert(m_tbl_datum_str + "." + m_col_obj_id_str, &intf.obj_id);
-    pointer.insert(m_tbl_datum_str + "." + m_col_pos_str, &intf.pos);
-    pointer.insert(m_tbl_datum_str + "." + m_col_lambda_str, &intf.lambda_data);
-    pointer.insert(m_tbl_datum_str + "." + m_col_data_str, &intf.lambda_data);
-    pointer.insert(m_tbl_datum_str + "." + m_col_date_str, &intf.rec_date);
-    pointer.insert(m_tbl_datum_str + "." + m_col_time_str, &intf.rec_time);
-    pointer.insert(m_tbl_datum_str + "." + m_col_dev_id_str, &intf.dev_id);
-    pointer.insert(m_tbl_datum_str + "." + m_col_expt_id_str, &intf.expt_id);
+    if(tbl_name.isEmpty() || m_tbl_devices_str == tbl_name)
+    {
+        drawer.dev_addr += sep + sender.dev_addr;
+        drawer.dev_desc += sep + sender.dev_desc;
+    }
+
+    if(tbl_name.isEmpty() || m_tbl_datum_str == tbl_name)
+    {
+        //do nothing. datum table needs not to be merged.
+    }
 }
 
-bool SkinDatabase::safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &rdb,
-                                         QList<SkinDatabase::tbl_rec_op_result_t>& op_result)
+void SkinDatabase::get_sql_select_helper(QMap<QString, void*> &pointer,
+                                  SkinDatabase::db_info_intf_t &intf,
+                                  QString tbl_name)
 {
-    typedef struct
+    if(tbl_name.isEmpty() || m_tbl_expts_str == tbl_name)
     {
-        QString tbl_name;
-        QString tbl_cols;
-        QString primary_id_str;
-    }tbl_name_cols_map_t;
-    tbl_name_cols_map_t tbl_name_cols_map[] =
+        pointer.insert(m_tbl_expts_str, &intf.expt_changed);
+        pointer.insert(m_tbl_expts_str + "." + m_col_expt_id_str, &intf.expt_id);
+        pointer.insert(m_tbl_expts_str + "." + m_col_desc_str, &intf.expt_desc);
+        pointer.insert(m_tbl_expts_str + "." + m_col_date_str, &intf.expt_date);
+        pointer.insert(m_tbl_expts_str + "." + m_col_time_str, &intf.expt_time);
+    }
+
+    if(tbl_name.isEmpty() || m_tbl_objects_str == tbl_name)
+    {
+        pointer.insert(m_tbl_objects_str, &intf.obj_changed);
+        pointer.insert(m_tbl_objects_str + "." + m_col_obj_id_str, &intf.obj_id);
+        pointer.insert(m_tbl_objects_str + "." + m_col_skin_type_str, &intf.skin_type);
+        pointer.insert(m_tbl_objects_str + "." + m_col_desc_str, &intf.obj_desc);
+    }
+
+    if(tbl_name.isEmpty() || m_tbl_devices_str == tbl_name)
+    {
+        pointer.insert(m_tbl_devices_str, &intf.dev_changed);
+        pointer.insert(m_tbl_devices_str + "." + m_col_dev_id_str, &intf.dev_id);
+        pointer.insert(m_tbl_devices_str + "." + m_col_dev_addr_str, &intf.dev_addr);
+        pointer.insert(m_tbl_devices_str + "." + m_col_desc_str, &intf.dev_desc);
+    }
+
+    if(tbl_name.isEmpty() || m_tbl_datum_str == tbl_name)
+    {
+        pointer.insert(m_tbl_datum_str, nullptr);
+        pointer.insert(m_tbl_datum_str + "." + m_col_obj_id_str, &intf.obj_id);
+        pointer.insert(m_tbl_datum_str + "." + m_col_pos_str, &intf.pos);
+        pointer.insert(m_tbl_datum_str + "." + m_col_lambda_str, &intf.lambda_data);
+        pointer.insert(m_tbl_datum_str + "." + m_col_data_str, &intf.lambda_data);
+        pointer.insert(m_tbl_datum_str + "." + m_col_date_str, &intf.rec_date);
+        pointer.insert(m_tbl_datum_str + "." + m_col_time_str, &intf.rec_time);
+        pointer.insert(m_tbl_datum_str + "." + m_col_dev_id_str, &intf.dev_id);
+        pointer.insert(m_tbl_datum_str + "." + m_col_expt_id_str, &intf.expt_id);
+    }
+}
+
+const SkinDatabase::tbl_name_cols_map_t* SkinDatabase::get_tbl_name_cols_map(QString tbl_name,
+                                                                       int * p_cnt)
+{
+    static const tbl_name_cols_map_t tbl_name_cols_map[] =
     {
         {m_tbl_expts_str, _TBL_EXPTS_COLS_, m_col_expt_id_str},
         {m_tbl_objects_str, _TBL_OBJECTS_COLS_, m_col_obj_id_str},
         {m_tbl_devices_str, _TBL_DEVICES_COLS_, m_col_dev_id_str},
         {m_tbl_datum_str, _TBL_DATUM_COLS_ + m_col_rec_id_str, m_col_rec_id_str},
     };
+    const tbl_name_cols_map_t * p = nullptr;
+    int cnt = 0;
+    if(tbl_name.isEmpty())
+    {
+        p = tbl_name_cols_map;
+        cnt = DIY_SIZE_OF_ARRAY(tbl_name_cols_map);
+    }
+    else
+    {
+        for(int idx = 0; idx < DIY_SIZE_OF_ARRAY(tbl_name_cols_map); idx++)
+        {
+            if(tbl_name_cols_map[idx].tbl_name == tbl_name)
+            {
+                p = &tbl_name_cols_map[idx];
+                cnt = 1;
+                break;
+            }
+        }
+    }
+    if(p_cnt)
+    {
+        *p_cnt = cnt;
+    }
+    return p;
+}
+
+/*
+ * db_q contains a record SELECTed from db. we fill the value in it into helper.
+*/
+QString SkinDatabase::fill_intf_from_sql_query_record(QString &tbl_name,
+                                            QStringList &col_list,
+                                            QSqlQuery &db_q,
+                                            QMap<QString, void*> &helper,
+                                            const QString &primary_key_str)
+{
+    bool one_data_item;
+    db_lambda_data_s_t lambda_data_p;
+    QString primary_key_val = "";
+
+    if(m_tbl_datum_str == tbl_name)
+    {
+        one_data_item = false;
+        for(int c_idx = 0; c_idx < col_list.count(); c_idx++)
+        {
+            if((m_col_lambda_str == col_list[c_idx])
+                    || (m_col_data_str == col_list[c_idx]))
+            {
+                if(m_col_lambda_str == col_list[c_idx])
+                {
+                    lambda_data_p.lambda = db_q.value(c_idx).toUInt();
+                }
+                else
+                {
+                    lambda_data_p.data = db_q.value(c_idx).toULongLong();
+                }
+                if(!one_data_item)
+                {
+                    one_data_item = true;
+                }
+                else
+                {
+                    (*(QList<db_lambda_data_s_t>*)(helper[tbl_name + "." + col_list[c_idx]])).append(lambda_data_p);
+                }
+            }
+            else if(m_col_rec_id_str != col_list[c_idx])
+            {
+                *(QString*)(helper[tbl_name + "." + col_list[c_idx]])
+                        = db_q.value(c_idx).toString();
+            }
+            else
+            {
+                /* note rec_id is int. but for simplification of implement, we
+                * return it as string. change it to int as need.
+                */
+                primary_key_val = db_q.value(c_idx).toString();
+            }
+        }
+    }
+    else
+    {
+        for(int c_idx = 0; c_idx < col_list.count(); c_idx++)
+        {
+            *(QString*)(helper[tbl_name + "." + col_list[c_idx]])
+                    = db_q.value(c_idx).toString();
+            if(col_list[c_idx] == primary_key_str)
+            {
+                primary_key_val = db_q.value(c_idx).toString();
+            }
+        }
+        *(bool*)(helper[tbl_name]) = true;
+    }
+    return primary_key_val;
+}
+
+bool SkinDatabase::safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &rdb,
+                                         QList<SkinDatabase::tbl_rec_op_result_t>& op_result)
+{
+    const tbl_name_cols_map_t * tbl_name_cols_map;
+    int tbl_cnt;
+    tbl_name_cols_map = get_tbl_name_cols_map("", &tbl_cnt);
+    if(tbl_cnt <= 0 || nullptr == tbl_name_cols_map)
+    {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "Get tbl_name_cols_map error!");
+        return false;
+    }
+
     QMap<QString, void*> helper;
     db_info_intf_t intf;
     QSqlQuery safe_ldb_q(safe_ldb);
     bool ret = true, result_ret = true;
-    db_lambda_data_s_t lambda_data_p;
-    bool one_data_item = false;
     SkinDatabase::tbl_rec_op_result_t tbl_op_ret;
 
     get_sql_select_helper(helper, intf);
-    for(int idx = 0; idx < DIY_SIZE_OF_ARRAY(tbl_name_cols_map); idx++)
+    for(int idx = 0; idx < tbl_cnt; idx++)
     {
         QString tbl_name = tbl_name_cols_map[idx].tbl_name;
         QString cols = tbl_name_cols_map[idx].tbl_cols;
@@ -1114,55 +1308,11 @@ bool SkinDatabase::safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &r
         {
             intf.lambda_data.clear();
             intf.dev_changed = intf.obj_changed = intf.expt_changed = false;
-            if(m_tbl_datum_str == tbl_name)
-            {
-                one_data_item = false;
-                for(int c_idx = 0; c_idx < col_list.count(); c_idx++)
-                {
-                    if((m_col_lambda_str == col_list[c_idx])
-                            || (m_col_data_str == col_list[c_idx]))
-                    {
-                        if(m_col_lambda_str == col_list[c_idx])
-                        {
-                            lambda_data_p.lambda = safe_ldb_q.value(c_idx).toUInt();
-                        }
-                        else
-                        {
-                            lambda_data_p.data = safe_ldb_q.value(c_idx).toULongLong();
-                        }
-                        if(!one_data_item)
-                        {
-                            one_data_item = true;
-                        }
-                        else
-                        {
-                            (*(QList<db_lambda_data_s_t>*)(helper[tbl_name + "." + col_list[c_idx]])).append(lambda_data_p);
-                        }
-                    }
-                    else if(m_col_rec_id_str != col_list[c_idx])
-                    {
-                        *(QString*)(helper[tbl_name + "." + col_list[c_idx]])
-                                = safe_ldb_q.value(c_idx).toString();
-                        if(col_list[c_idx] == primary_key_str)
-                        {
-                            primary_key_val = safe_ldb_q.value(c_idx).toString();
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for(int c_idx = 0; c_idx < col_list.count(); c_idx++)
-                {
-                    *(QString*)(helper[tbl_name + "." + col_list[c_idx]])
-                            = safe_ldb_q.value(c_idx).toString();
-                    if(col_list[c_idx] == primary_key_str)
-                    {
-                        primary_key_val = safe_ldb_q.value(c_idx).toString();
-                    }
-                }
-                *(bool*)(helper[tbl_name]) = true;
-            }
+            primary_key_val = fill_intf_from_sql_query_record(tbl_name,
+                                                              col_list,
+                                                              safe_ldb_q,
+                                                              helper,
+                                                              primary_key_str);
             /*now write it into rdb.*/
             ret = SkinDatabase::write_db(rdb, intf, SkinDatabase::REMOTE,
                                          SkinDatabase::DB_MYSQL);

@@ -722,8 +722,12 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
             ui->chat->insertPlainText(utf8_str);
         }
         SkinDatabase::db_lambda_data_s_t ld;
-        //ld.lambda = m_curr_light_no.value()->lambda;
-        ld.lambda = lambda_value.toUInt(nullptr, 16);
+
+        ld.lambda = (*m_curr_light_no)->lambda;
+        if(0 == ld.lambda)
+        {
+            ld.lambda = lambda_value.toUInt(nullptr, 16);
+        }
         ld.data = data.toULongLong(nullptr, 16);
         m_db_data.lambda_data.append(ld);
         val_p_prf.prepend("***");

@@ -86,6 +86,13 @@ public:
         QString tbl_name;
         int rec_cnt, rec_succ, rec_fail, rec_part_succ;
     }tbl_rec_op_result_t;
+
+    typedef struct
+    {
+        QString tbl_name;
+        QString tbl_cols;
+        QString primary_id_str;
+    }tbl_name_cols_map_t;
 private:
     db_info_intf_t m_intf;
     QString m_safe_ldb_dir_str = "";
@@ -127,8 +134,8 @@ public:
     static bool prepare_safe_ldb(QString pth, QString name, QString tbl_name,
                                     QString safe_ldb_conn_name_str);
     static bool db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
-                                   QSqlError &cur_sql_err,
-                                   QString tbl_name, QString cmd, db_type_t db_type);
+                                   QSqlError &cur_sql_err, QString &cur_cmd,
+                                   QString &tbl_name, db_type_t db_type);
     void close_dbs(db_ind_t db_ind);
     static bool safe_ldb_to_remote_db(QSqlDatabase &safe_ldb, QSqlDatabase &rdb,
                                       QList<SkinDatabase::tbl_rec_op_result_t>& op_result);
@@ -160,6 +167,18 @@ public slots:
     void remote_db_write_done_handler(SkinDatabase::db_ind_t write_ind, bool ret);
 private:
     QThread m_rdb_thread;
+    static void get_sql_select_helper(QMap<QString, void*> &pointer,
+                                  SkinDatabase::db_info_intf_t &intf,
+                                  QString tbl_name = "");
+    static const tbl_name_cols_map_t* get_tbl_name_cols_map(QString tbl_name,
+                                                            int * cnt = nullptr);
+    static QString fill_intf_from_sql_query_record(QString &tbl_name,
+                                                QStringList &col_list,
+                                                QSqlQuery &db_q,
+                                                QMap<QString, void*> &helper,
+                                                const QString &primary_key_str);
+    static void merge_two_db_intf(db_info_intf_t &drawer, db_info_intf_t &sender,
+                                  QString tbl_name = "");
 };
 
 /*sqlerr must be of type QSqlError*/
