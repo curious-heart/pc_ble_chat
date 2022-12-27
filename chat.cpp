@@ -80,9 +80,6 @@ Chat::Chat(QWidget *parent)
 {
     start_log_thread(m_log_thread);
 
-    DIY_LOG(LOG_LEVEL::LOG_INFO, "+++++++++++++Chat construct in thread: %u",
-            (quint64)(QThread::currentThreadId()));
-
     //! [Construct UI]
     ui->setupUi(this);
 
@@ -431,7 +428,7 @@ bool Chat::check_volu_info()
     curr_no = ui->numberTextEdit->text();
     if(curr_no.isEmpty())
     {
-        err_str = "编号为空，请确认是否继续！";
+        err_str = "编号为空，将自动设为当前日期+时间。请确认是否继续！";
     }
     else if(m_db_data.obj_id == curr_no)
     {
@@ -444,6 +441,13 @@ bool Chat::check_volu_info()
         if(QMessageBox::No == sel)
         {
             return false;
+        }
+        if(curr_no.isEmpty())
+        {
+            /*编号为空，自动设置为当前日期和时间*/
+            QString synthe_no = QString(m_def_obj_id_prefix)
+                                + diy_curr_date_time_str_ms(false);
+            ui->numberTextEdit->setText(synthe_no);
         }
     }
     return true;
@@ -482,6 +486,31 @@ bool Chat::check_and_mkpth()
 
 bool Chat::prepare_qfile_for_start()
 {
+    if(ui->devIDTextEdit->text().isEmpty()
+            || ui->exptIDTextEdit->text().isEmpty())
+    {
+        /*check dev_id and experiment id. They are as primary key in database,
+         * so can't be empty. If empty, set to default value.
+        */
+        QString err_str = "实验ID和设备ID不能为空。如果不填写，将使用自动生成的ID。是否继续？";
+        QMessageBox::StandardButton sel;
+        sel = QMessageBox::question(nullptr, "？？？", err_str);
+        if(QMessageBox::No == sel)
+        {
+            return false;
+        }
+        if(ui->devIDTextEdit->text().isEmpty())
+        {
+            ui->devIDTextEdit->setText(QString(m_def_dev_id_prefix)
+                                       + m_work_dev_info->addr);
+        }
+        if(ui->exptIDTextEdit->text().isEmpty())
+        {
+            ui->exptIDTextEdit->setText(QString(m_def_expt_id_prefix)
+                                        + diy_curr_date_time_str_ms(false));
+        }
+    }
+
     QString now_pos, now_obj_id;
     if(m_calibrating)
     {
@@ -636,7 +665,7 @@ void Chat::start_send_data_to_device(bool single_cmd)
             m_single_light_write = false;
             m_curr_light_no = m_work_dev_info->light_list.begin();
             gen_pkt_ok = ble_comm_gen_app_light_pkt(bytes_to_send,
-                                       (*m_curr_light_no)->idx, m_work_dev_info->dev_type);
+                                       m_curr_light_no->idx, m_work_dev_info->dev_type);
         }
 
         if(gen_pkt_ok)
@@ -723,7 +752,7 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
         }
         SkinDatabase::db_lambda_data_s_t ld;
 
-        ld.lambda = (*m_curr_light_no)->lambda;
+        ld.lambda = m_curr_light_no->lambda;
         if(0 == ld.lambda)
         {
             ld.lambda = lambda_value.toUInt(nullptr, 16);
@@ -773,7 +802,7 @@ void Chat::turn_on_next_light(light_list_t::Iterator no)
     {
         QByteArray bytes_to_send;
         bool gen_pkt_ok =  ble_comm_gen_app_light_pkt(bytes_to_send,
-                                                      (*m_curr_light_no)->idx,
+                                                      m_curr_light_no->idx,
                                                       m_work_dev_info->dev_type);
         if(gen_pkt_ok)
         {
@@ -853,8 +882,8 @@ void Chat::write_data_done_handle(bool done)
                 non_empty = false;
             }
             err = QString("超时，未收到波长=%1，idx=%2的灯光数据。结束！").\
-                    arg((*m_curr_light_no)->lambda).\
-                    arg((*m_curr_light_no)->idx);
+                    arg(m_curr_light_no->lambda).\
+                    arg(m_curr_light_no->idx);
         }
         title = "!!!";
     }
@@ -1221,6 +1250,7 @@ void Chat::show_rdb_wait_box(bool show, QString title, QString box_str,
 
 void Chat::on_quitButton_clicked()
 {
+    m_user_closing = true;
     if(m_skin_db)
     {
         if(m_writing_rdb)
@@ -1240,12 +1270,14 @@ void Chat::on_quitButton_clicked()
 
 void Chat::closeEvent(QCloseEvent *event)
 {
+    m_user_closing = true;
     if(m_skin_db)
     {
         if(m_writing_rdb)
         {
             show_rdb_wait_box(true, "", QString("上传远程数据库尚未完成，请稍等..."),
                               QMessageBox::StandardButton::Ok);
+            event->ignore();
             return;
         }
         else
@@ -1270,6 +1302,10 @@ void Chat::rdb_write_done_hanlder(SkinDatabase::db_ind_t write_ind, bool /*ret*/
 
     m_writing_rdb = false;
     show_rdb_wait_box(false);
+    if(m_skin_db)
+    {
+        m_skin_db->close_dbs(SkinDatabase::DB_ALL);
+    }
     if(SkinDatabase::DB_NONE == write_ind)
     {
         result_str = QString("数据未能上传到远程数据库，也未能在本地%1文件夹中保存！\n"
@@ -1279,7 +1315,7 @@ void Chat::rdb_write_done_hanlder(SkinDatabase::db_ind_t write_ind, bool /*ret*/
     else if(write_ind & (SkinDatabase::DB_SAFE_LDB))
     {
         result_str = QString("部分数据未能成功上传到远程数据库。它们已经在本地%1文件中保存。\n"
-                             "后续您可以点击\"上传safe ldb\"按钮选择该文件，将其中的数据上传到远程数据库左长久保存。")
+                             "后续您可以点击\"上传safe ldb\"按钮选择该文件，将其中的数据上传到远程数据库作长久保存。")
                 .arg(m_safe_ldb_for_rdb_rel_name);
     }
     else
@@ -1288,7 +1324,7 @@ void Chat::rdb_write_done_hanlder(SkinDatabase::db_ind_t write_ind, bool /*ret*/
         result_str = QString("数据已同步上传到远程数据库保存");
     }
 
-    if(box_ind)
+    if(box_ind && m_user_closing)
     {
         ui->stateIndTextEdit->clear();
         QMessageBox::warning(nullptr, "!!!", result_str);

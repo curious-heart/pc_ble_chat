@@ -163,6 +163,9 @@ private:
 
     bool m_file_write_ready = false;
     bool m_dir_ready = false;
+    const char* m_def_expt_id_prefix = "expt-";
+    const char* m_def_obj_id_prefix = "obj-";
+    const char* m_def_dev_id_prefix = "dev-";
     const char* m_data_dir_rel_name = "0000-light_data_dir";
     const char* m_all_rec_dir_rel_name = "ori_data";
     const char* m_txt_dir_rel_name = "txt";
@@ -216,6 +219,7 @@ private:
     QThread m_log_thread;
 
     bool m_writing_rdb = false;
+    bool m_user_closing = false;
     QString m_safe_ldb_for_upload_fpn = "";
     bool m_upload_safe_ldb_now = false;
     void select_safe_ldb_for_upload();

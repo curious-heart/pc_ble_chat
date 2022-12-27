@@ -6,7 +6,7 @@
 #include <QDateTime>
 
 QString QByteHexString(const QByteArray &qba, const QString sep = QString(" "));
-QString diy_curr_date_time_str_ms();
+QString diy_curr_date_time_str_ms(bool with_ms = true);
 quint8 diy_crc8_8540(const QByteArray &data, int len);
 quint8 diy_crc8_8210(const QByteArray &data, int len);
 bool is_mac_address(QString mac);

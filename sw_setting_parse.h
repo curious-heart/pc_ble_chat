@@ -15,7 +15,7 @@ typedef struct _light_info_t
     int flash_gap; /*熄灭后到下一个灯点亮前的间隔时间(ms)*/
     int idx; /*设备内部对灯的编号。从1开始*/
 }light_info_t;
-typedef QList<light_info_t*> light_list_t;
+typedef QList<light_info_t> light_list_t;
 
 typedef class _ble_dev_info_t
 {
@@ -38,12 +38,6 @@ public:
     }
     void clear_light_list()
     {
-        light_list_t::iterator it = light_list.begin();
-        while(it != light_list.end())
-        {
-            delete *it;
-            ++it;
-        }
         light_list.clear();
     }
     void clear_all()
@@ -52,6 +46,7 @@ public:
         dev_type = QString();
         clear_light_list();
         single_light_wait_time = 0;
+        light_cnt = 0;
     }
     void log_print()
     {
@@ -64,10 +59,11 @@ public:
        light_list_t::iterator it = light_list.begin();
        while(it != light_list.end())
        {
-           light_info_t* info = *it;
-           qDebug() << "lambda:" << info->lambda << ","
-                    << "flash_period:" << info->flash_period << ","
-                    << "flash_gap" << info->flash_gap << "\n";
+           qDebug() << "idx: " << it->idx << ", "
+                    << "lambda: " << it->lambda << ", "
+                    << "flash_period: " << it->flash_period << ", "
+                    << "flash_gap: " << it->flash_gap << "\n";
+           ++it;
        }
        qDebug() << "\n";
     }

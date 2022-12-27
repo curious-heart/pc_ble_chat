@@ -115,3 +115,11 @@ void end_log_thread(QThread &th)
         delete g_LogSigEmitter; g_LogSigEmitter = nullptr;
     }
 }
+
+void __emit_log_signal__(LOG_LEVEL level, QString loc_str, QString log)
+{
+    if(g_LogSigEmitter)
+    {
+        emit g_LogSigEmitter->record_log(level, loc_str, log);
+    }
+}

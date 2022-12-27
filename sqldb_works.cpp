@@ -733,6 +733,7 @@ bool SkinDatabase::db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
                     select_cmd.utf16(), sqlerr_str.utf16());
             return false;
         }
+        sel_q.next();
         get_sql_select_helper(db_val_helper, db_intf, tbl_name);
         QStringList col_list = tbl_name_cols_map->tbl_cols.split(",");
         fill_intf_from_sql_query_record(tbl_name,
@@ -772,10 +773,11 @@ bool SkinDatabase::db_ins_err_process(QSqlDatabase &qdb, db_info_intf_t &intf,
             return false;
         }
         DIY_LOG(LOG_LEVEL::LOG_INFO,
-                "Insert but duplicate,cmd:%ls\nNow try updating!", ins_cmd.utf16());
+                "Insert but duplicate,cmd:%ls\nNow try updating!", cur_cmd.utf16());
         /*update*/
         ins_cmd.remove(";");
         ins_cmd += " " +  upd_clau + ";";
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "Update insert cmd:%ls", ins_cmd.utf16());
         QSqlQuery query(qdb);
         ret = query.exec(ins_cmd);
         if(!ret)
@@ -1099,7 +1101,7 @@ void SkinDatabase::upload_safe_ldb_done_handler(QList<SkinDatabase::tbl_rec_op_r
 void SkinDatabase::merge_two_db_intf(db_info_intf_t &drawer, db_info_intf_t &sender,
                               QString tbl_name)
 {
-    QString sep = QString("\n********\n");
+    QString sep = QString("********");
 
     if(tbl_name.isEmpty() || m_tbl_expts_str == tbl_name)
     {
@@ -1177,7 +1179,7 @@ const SkinDatabase::tbl_name_cols_map_t* SkinDatabase::get_tbl_name_cols_map(QSt
         {m_tbl_expts_str, _TBL_EXPTS_COLS_, m_col_expt_id_str},
         {m_tbl_objects_str, _TBL_OBJECTS_COLS_, m_col_obj_id_str},
         {m_tbl_devices_str, _TBL_DEVICES_COLS_, m_col_dev_id_str},
-        {m_tbl_datum_str, _TBL_DATUM_COLS_ + m_col_rec_id_str, m_col_rec_id_str},
+        {m_tbl_datum_str, _TBL_DATUM_COLS_ + "," + m_col_rec_id_str, m_col_rec_id_str},
     };
     const tbl_name_cols_map_t * p = nullptr;
     int cnt = 0;

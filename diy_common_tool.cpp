@@ -21,12 +21,17 @@ QString QByteHexString(const QByteArray &qba, const QString sep)
     return str;
 }
 
-QString diy_curr_date_time_str_ms()
+QString diy_curr_date_time_str_ms(bool with_ms)
 {
     QDateTime curr_date_time;
+    QString fmt_str = "yyyyMMdd-hhmmss";
 
+    if(with_ms)
+    {
+        fmt_str += "-zzz";
+    }
     curr_date_time = QDateTime::currentDateTime();
-    return curr_date_time.toString("yyyyMMdd-hhmmss-zzz");
+    return curr_date_time.toString(fmt_str);
 }
 
 bool is_mac_address(QString mac)

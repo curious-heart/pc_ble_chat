@@ -38,6 +38,13 @@ signals:
 };
 extern LogSigEmitter *g_LogSigEmitter;
 
+/* !!!
+ * DO NOT call this function directly. It is defined just for warning-elimination.
+ * Use DIY_LOG macro.
+*/
+void __emit_log_signal__(LOG_LEVEL level, QString loc_str, QString log);
+
+
 /*
  * After start_log_thread is invoked with a QThread instance can DIY_LOG work.
  * Note: the life-cycle of th must expands to the whole thread.
@@ -71,7 +78,7 @@ void end_log_thread(QThread &th);
         QString loc_str = QString(__FILE__) + QString("  [%1]").arg(__LINE__);\
         if(g_LogSigEmitter)\
         {\
-            emit g_LogSigEmitter->record_log(level, loc_str, log);\
+            __emit_log_signal__(level, loc_str, log);\
         }\
         qDebug() << (log) << "\n";\
     }
