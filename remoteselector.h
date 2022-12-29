@@ -135,6 +135,11 @@ private:
 
     /*intersted device list from settings xml file.*/
     const QMap<QString, setting_ble_dev_info_t*> & m_intersted_devs;
+    /* If user select a device that is not recorded in m_intersted_devs,
+     * use m_work_dev_not_in_intersted_list to record that dev info. In this case,
+     * m_target_dev_setting_info points to this variable.
+    */
+    setting_ble_dev_info_t m_work_dev_not_in_intersted_list;
 private:
     void recogonize_char(QLowEnergyService * intersted_srv);
     QString format_dev_info_str(const QBluetoothDeviceInfo * dev);

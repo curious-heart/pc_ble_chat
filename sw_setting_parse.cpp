@@ -1,6 +1,7 @@
 #include <QtXml>
 #include <QFile>
 #include <QMap>
+#include <QMessageBox>
 
 #include "logger.h"
 #include "sw_setting_parse.h"
@@ -236,7 +237,11 @@ static void take_default_lights(light_list_t &light_list, QString &dev_type)
     for(int i = 0; i < def_lights->num; i++)
     {
         light_info_t in;
-        in.lambda = def_lights->d_arr[i];
+        /*if user does not assign lambda in xml, use the value from device,
+         * so we set lambda to 0 here.
+         * Refer to the use of lambda in BleServiceCharacteristicChanged
+        */
+        in.lambda = 0; //def_lights->d_arr[i];
         in.flash_period = g_def_light_flash_period;
         in.flash_gap= g_def_light_flash_gap;
         in.idx = i+1;
@@ -473,23 +478,34 @@ static str_parser_map_t &init_sw_settings_xml_parser(str_bool_map_t & ret)
 static str_bool_map_t& load_sw_settings_from_xml(sw_settings_t &loaded, bool& valid_e)
 {
     QFile xml_file(g_settings_xml_fpn);
+    QString err_str, xml_abs_pth;
     QDomDocument doc;
+    QString xml_err_str;
+    int xml_err_line, xml_err_col;
     static str_bool_map_t xml_parse_result;
 
-    {
-        QFileInfo fi(xml_file);
-        DIY_LOG(LOG_LEVEL::LOG_INFO, "load xml: %ls", fi.absoluteFilePath().utf16());
-    }
+    QFileInfo fi(xml_file);
+    xml_abs_pth = fi.absoluteFilePath();
+    DIY_LOG(LOG_LEVEL::LOG_INFO, "load xml: %ls", xml_abs_pth.utf16());
 
     str_parser_map_t &parser_map = init_sw_settings_xml_parser(xml_parse_result);
     if(!xml_file.open(QIODevice::ReadOnly))
     {
-        DIY_LOG(LOG_LEVEL::LOG_WARN, "Open XML file %s fail!", g_settings_xml_fpn);
+        err_str = QString("打开XML文件失败！\n") + xml_abs_pth
+                  + "\n\n使用软件内部默认配置。";
+        DIY_LOG(LOG_LEVEL::LOG_WARN, "%ls", err_str.utf16());
+        QMessageBox::critical(nullptr, "!!!", err_str);
         return xml_parse_result;
     }
-    if(!doc.setContent(&xml_file))
+    if(!doc.setContent(&xml_file, &xml_err_str, &xml_err_line, &xml_err_col))
     {
-        DIY_LOG(LOG_LEVEL::LOG_ERROR, "DomDocument setContent fail");
+        err_str = QString("DomDocument setContent失败！\n") + xml_abs_pth
+                + QString("\n错误信息：\n%1 ").arg(xml_err_str)
+                + QString("Line: %1，").arg(xml_err_line)
+                + QString("Col: %1\n").arg(xml_err_col)
+                + "\n\n使用软件内部默认配置。";
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err_str.utf16());
+        QMessageBox::critical(nullptr, "!!!", err_str);
         return xml_parse_result;
     }
     xml_file.close();
@@ -594,12 +610,12 @@ bool load_sw_settings(sw_settings_t &sw_s, bool &valid_e)
     //check single_light_wait_time and fill light idx.
     QMap<QString, setting_ble_dev_info_t*>::Iterator dev_it = sw_s.ble_dev_list.begin();
     light_list_t::Iterator light_it;
-    int w_t, cur_v;
-    int pre_idx = g_min_light_idx_m1;
+    int w_t, cur_v, pre_idx ;
     while(dev_it != sw_s.ble_dev_list.end())
     {
         light_it = dev_it.value()->light_list.begin();
         w_t = dev_it.value()->single_light_wait_time;
+        pre_idx = g_min_light_idx_m1;
         while(light_it != dev_it.value()->light_list.end())
         {
             cur_v = (light_it->flash_period + light_it->flash_gap) * 2;
@@ -615,7 +631,8 @@ bool load_sw_settings(sw_settings_t &sw_s, bool &valid_e)
         dev_it.value()->single_light_wait_time = w_t;
 
         int need_add = dev_it.value()->light_cnt - dev_it.value()->light_list.count();
-        int last_idx = dev_it.value()->light_list.last().idx + 1;
+        int last_idx =
+                (dev_it.value()->light_list.isEmpty()) ? g_min_light_idx_m1 + 1 : dev_it.value()->light_list.last().idx + 1;
         if(need_add > 0)
         {
             for(int idx=0; idx < need_add; idx++)

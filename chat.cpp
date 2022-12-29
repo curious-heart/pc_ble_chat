@@ -1250,7 +1250,6 @@ void Chat::show_rdb_wait_box(bool show, QString title, QString box_str,
 
 void Chat::on_quitButton_clicked()
 {
-    m_user_closing = true;
     if(m_skin_db)
     {
         if(m_writing_rdb)
@@ -1263,6 +1262,10 @@ void Chat::on_quitButton_clicked()
         {
             m_skin_db->close_dbs(SkinDatabase::DB_ALL);
             show_rdb_wait_box(false);
+            if(!m_user_close_hint_msg.isEmpty())
+            {
+                QMessageBox::warning(nullptr, "!!!",  m_user_close_hint_msg);
+            }
         }
     }
     this->accept();
@@ -1270,7 +1273,6 @@ void Chat::on_quitButton_clicked()
 
 void Chat::closeEvent(QCloseEvent *event)
 {
-    m_user_closing = true;
     if(m_skin_db)
     {
         if(m_writing_rdb)
@@ -1284,6 +1286,10 @@ void Chat::closeEvent(QCloseEvent *event)
         {
             m_skin_db->close_dbs(SkinDatabase::DB_ALL);
             show_rdb_wait_box(false);
+            if(!m_user_close_hint_msg.isEmpty())
+            {
+                QMessageBox::warning(nullptr, "!!!",  m_user_close_hint_msg);
+            }
         }
     }
     event->accept();
@@ -1297,8 +1303,8 @@ void Chat::rdb_write_start_handler()
 
 void Chat::rdb_write_done_hanlder(SkinDatabase::db_ind_t write_ind, bool /*ret*/)
 {
-    QString result_str;
-    bool box_ind = true;
+    QString result_str, part_ind_str = QString("部分");
+    static bool no_db_save_rec = false, part_up_rec = false;
 
     m_writing_rdb = false;
     show_rdb_wait_box(false);
@@ -1311,28 +1317,56 @@ void Chat::rdb_write_done_hanlder(SkinDatabase::db_ind_t write_ind, bool /*ret*/
         result_str = QString("数据未能上传到远程数据库，也未能在本地%1文件夹中保存！\n"
                              "您可以从本地的csv文件和%2文件夹中查找数据。建议后续将这些数据手动上传到远程数据库作长久保存！")
                 .arg(m_safe_ldb_for_rdb_rel_name, m_local_db_dir_rel_name);
+        if(!no_db_save_rec)
+        {
+            if(m_user_close_hint_msg.isEmpty())
+            {
+                m_user_close_hint_msg = result_str;
+            }
+            else
+            {
+                m_user_close_hint_msg = result_str + "\n" + m_user_close_hint_msg;
+            }
+            if(part_up_rec)
+            {
+                m_user_close_hint_msg = part_ind_str + m_user_close_hint_msg;
+            }
+        }
+        no_db_save_rec = true;
     }
     else if(write_ind & (SkinDatabase::DB_SAFE_LDB))
     {
-        result_str = QString("部分数据未能成功上传到远程数据库。它们已经在本地%1文件中保存。\n"
+        result_str = QString("数据未能成功上传到远程数据库。");
+        if(write_ind & (SkinDatabase::DB_REMOTE))
+        {
+            result_str = part_ind_str + result_str;
+        }
+
+        result_str += QString("它们已经在本地%1文件中保存。\n"
                              "后续您可以点击\"上传safe ldb\"按钮选择该文件，将其中的数据上传到远程数据库作长久保存。")
                 .arg(m_safe_ldb_for_rdb_rel_name);
+
+        if(!part_up_rec)
+        {
+            if(!m_user_close_hint_msg.isEmpty())
+            {
+                m_user_close_hint_msg += "\n";
+            }
+            m_user_close_hint_msg += result_str;
+            if(no_db_save_rec)
+            {
+                m_user_close_hint_msg = part_ind_str + m_user_close_hint_msg;
+            }
+        }
+        part_up_rec = true;
     }
     else
     {
-        box_ind = false;
         result_str = QString("数据已同步上传到远程数据库保存");
     }
 
-    if(box_ind && m_user_closing)
-    {
-        ui->stateIndTextEdit->clear();
-        QMessageBox::warning(nullptr, "!!!", result_str);
-    }
-    else
-    {
-        ui->stateIndTextEdit->setText(result_str);
-    }
+    ui->stateIndTextEdit->setText(result_str);
+
 }
 
 void Chat::upload_safe_ldb_end_handler(QList<SkinDatabase::tbl_rec_op_result_t> op_result,

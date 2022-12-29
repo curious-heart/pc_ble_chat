@@ -51,7 +51,6 @@
 //#include <QtCore/QLoggingCategory>
 #include <QTextCodec>
 
-#include "logger.h"
 #include "chat.h"
 
 int main(int argc, char *argv[])

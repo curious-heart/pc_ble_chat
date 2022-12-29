@@ -45,7 +45,8 @@
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
 	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
-	    <light_list> <!-- 灯列表 -->
+	    <light_count>19</light_count>
+	       <light_list> 
 		<light>
 		    <lambda>354</lambda> 
 		    <flash_period>500</flash_period> 
@@ -148,6 +149,7 @@
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
 	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
+	    <light_count>9</light_count>
 	    <light_list>
 		<light>
 		    <lambda>560</lambda>
@@ -155,13 +157,9 @@
 		</light>
 		<light>
 		    <lambda>600</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 		<light>
 		    <lambda>645</lambda>
-		    <flash_period>500</flash_period>
-		    <flash_gap>10</flash_gap>
 		</light>
 	    </light_list>
         </dev>
@@ -177,9 +175,16 @@
 		</light>
 		<light>
 		    <lambda>600</lambda>
+		    <idx>6</idx>
 		</light>
 		<light>
 		    <lambda>645</lambda>
+		</light>
+		<light>
+		    <lambda>1200</lambda>
+		</light>
+		<light>
+		    <lambda>1300</lambda>
 		</light>
 	    </light_list>
 	</dev>
@@ -189,17 +194,6 @@
 	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
 	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
 	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
-	    <light_list>
-		<light>
-		    <lambda>560</lambda>
-		</light>
-		<light>
-		    <lambda>600</lambda>
-		</light>
-		<light>
-		    <lambda>645</lambda>
-		</light>
-	    </light_list>
 	</dev>
     </ble_dev_list>
 

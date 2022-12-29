@@ -222,7 +222,6 @@ void RemoteSelector::dev_discoveryErr(QBluetoothDeviceDiscoveryAgent::Error /*er
 void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
 {
     QString dev_address;
-    bool default_dev_setting = false;
 
     m_device = m_discoveredDevices.value(item);
     if (m_dev_discoveryAgent->isActive())
@@ -236,6 +235,7 @@ void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
         QString err2 = QString("尝试使用默认配置。");
         DIY_LOG(LOG_LEVEL::LOG_INFO, "%ls%ls,%ls",
                 err1.utf16(), dev_address.utf16(), err2.utf16());
+        QMessageBox::information(nullptr, "...", err1 + dev_address + "，" + err2);
         m_target_dev_setting_info = m_intersted_devs.value(g_def_ble_dev_addr, nullptr);
         if(nullptr == m_target_dev_setting_info)
         {
@@ -248,22 +248,15 @@ void RemoteSelector::on_remoteDevices_itemActivated(QListWidgetItem *item)
         else
         {
             DIY_LOG(LOG_LEVEL::LOG_INFO, "获取默认配置成功！");
-            default_dev_setting = true;
+
+            m_work_dev_not_in_intersted_list = *m_target_dev_setting_info;
+            m_work_dev_not_in_intersted_list.addr = dev_address;
+            m_target_dev_setting_info = &m_work_dev_not_in_intersted_list;
         }
-        /*
-        QMessageBox::information(nullptr, "!!!", "不是有效设备!");
-        return;
-        */
     }
 
-    if(default_dev_setting)
-    {
-        m_intersted_dev_addr_str = dev_address;
-    }
-    else
-    {
-        m_intersted_dev_addr_str = m_target_dev_setting_info->addr;
-    }
+    m_intersted_dev_addr_str = dev_address;
+
     m_intrested_srv_uuid_str = m_target_dev_setting_info->srv_uuid;
     m_intersted_char_tx_uuid
             = QBluetoothUuid(m_target_dev_setting_info->tx_char_uuid);

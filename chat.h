@@ -219,7 +219,7 @@ private:
     QThread m_log_thread;
 
     bool m_writing_rdb = false;
-    bool m_user_closing = false;
+    QString m_user_close_hint_msg = "";
     QString m_safe_ldb_for_upload_fpn = "";
     bool m_upload_safe_ldb_now = false;
     void select_safe_ldb_for_upload();
