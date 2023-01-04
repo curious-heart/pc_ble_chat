@@ -234,6 +234,14 @@ private:
     void push_pop_data_collection_btns(chat_push_pop_btn_t p_p);
     void disable_data_collection_btns();
 
+    const quint64 m_invalid_ldata = (quint64)(-1);
+    typedef QMap<quint32, quint64> lambda_data_map_t;
+    typedef QMap<quint32, QList<quint64>> x_axis_values_t;
+    x_axis_values_t m_x_axis_values;
+    void draw_data_from_file(QFile &txt_f, lambda_data_map_t &l_d);
+    void add_lambda_data_map(lambda_data_map_t &l_d, x_axis_values_t &x_l_d);
+    void display_lambda_data_lines(x_axis_values_t &x_l_d);
+
 protected:
     void closeEvent(QCloseEvent * event);
 };

@@ -21,4 +21,6 @@
  * DON'T confuse it with the light count in this APP file.
 */
 bool ble_comm_gen_app_light_pkt(QByteArray &qba, int idx, QString dev_type);
+bool ble_comm_get_lambda_data_from_pkt(QByteArray &qba, quint32 &lambda, quint64 &data,
+                                       QString dev_type = CLONE_DEV_TYPE_STR);
 #endif // BLE_COMM_PKT_H

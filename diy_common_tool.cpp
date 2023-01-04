@@ -1,7 +1,5 @@
 #include <QRegularExpression>
 #include <QRegularExpressionValidator>
-//#include <QRegExpValidator>
-#include <QDir>
 #include "diy_common_tool.h"
 #include "logger.h"
 
@@ -19,6 +17,35 @@ QString QByteHexString(const QByteArray &qba, const QString sep)
         str.remove(last_p, sep.size());
     }
     return str;
+}
+
+QByteArray hex_str_to_byte_array(QString &str)
+{
+    QByteArray b_arr;
+
+    b_arr.clear();
+    if(str.length() %2 != 0)
+    {
+        DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                "Invalid string format: it should contain even number of hex chars.");
+        return b_arr;
+    }
+
+    bool ok;
+    ushort d;
+    for(int i = 0; i < str.length(); i += 2)
+    {
+        d = str.mid(i, 2).toUShort(&ok, 16);
+        if(!ok)
+        {
+            DIY_LOG(LOG_LEVEL::LOG_ERROR,
+                    "Invalid string format: containing invalid hex char.");
+            b_arr.clear();
+            break;
+        }
+        b_arr.append(d);
+    }
+    return b_arr;
 }
 
 QString diy_curr_date_time_str_ms(bool with_ms)
@@ -93,6 +120,27 @@ bool mkpth_if_not_exists(QString &pth_str)
                 }
             }
     */
+}
+
+/*
+ * path: absolute or relative path.
+ * result: a string list, containing the full(absolute) path of items under the path.
+*/
+void get_dir_content_fpn_list(QString &path, QStringList &result,
+                              QDir::Filter filter_f, QDir::SortFlag sort_f, QString ext_name)
+{
+    QString abs_path = QFileInfo(path).absoluteFilePath();
+    QDir q_dir(abs_path);
+    QFileInfoList e_l;
+
+    e_l = q_dir.entryInfoList(filter_f, sort_f);
+    foreach(const QFileInfo &e, e_l)
+    {
+        if(e.fileName().endsWith(ext_name))
+        {
+            result.append(e.absoluteFilePath());
+        }
+    }
 }
 
 static const quint8 caCrc8Data_8540[256] = {

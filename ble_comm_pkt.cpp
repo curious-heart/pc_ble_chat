@@ -53,3 +53,17 @@ bool ble_comm_gen_app_light_pkt(QByteArray &qba, int idx, QString dev_type)
     return ret;
 }
 
+bool ble_comm_get_lambda_data_from_pkt(QByteArray &qba, quint32 &lambda, quint64 &data,
+                                       QString /*dev_type*/)
+{
+    if(qba.isEmpty() || qba.length() < qMax(ORID_DATA_POS_START + ORID_DATA_BYTES_NUM,
+                                            ORID_LAMBDA_POS_START + ORID_LAMBDA_BYTES_NUM))
+    {
+        return false;
+    }
+
+    lambda = QByteArray(&qba[ORID_LAMBDA_POS_START], ORID_LAMBDA_BYTES_NUM).toUInt();
+    data = QByteArray(&qba[ORID_DATA_POS_START], ORID_DATA_BYTES_NUM).toULongLong();
+
+    return true;
+}

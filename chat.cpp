@@ -57,6 +57,12 @@
 #include <QtBluetooth/qbluetoothuuid.h>
 #include <QMessageBox>
 
+#include <QtCharts/QChartView>
+#include <QtCharts/QLineSeries>
+#include <QtCharts/QLegend>
+#include <QtCharts/QBarCategoryAxis>
+#include <QtCharts/QValueAxis>
+
 #include "types_and_defs.h"
 #include "logger.h"
 #include "ble_comm_pkt.h"
@@ -1088,10 +1094,86 @@ void Chat::on_onlyValidDatacheckBox_stateChanged(int /*arg1*/)
     }
 }
 
+void Chat::draw_data_from_file(QFile &txt_f, lambda_data_map_t &l_d)
+{
+     if(!txt_f.open(QIODevice::ReadOnly | QIODevice::Text))
+     {
+         DIY_LOG(LOG_LEVEL::LOG_WARN, "Read file error: %ls", txt_f.fileName().utf16());
+         return;
+     }
+
+     QByteArray b_arr;
+     quint32 lambda;
+     quint64 data;
+     QString line;
+     QTextStream in(&txt_f);
+     while (!in.atEnd()) {
+         line = in.readLine();
+         line.remove(" ");
+         b_arr = hex_str_to_byte_array(line);
+         ble_comm_get_lambda_data_from_pkt(b_arr, lambda, data);
+         l_d.insert(lambda, data);
+     }
+}
+
+void Chat::add_lambda_data_map(lambda_data_map_t &l_d, x_axis_values_t &x_l_d)
+{
+    qsizetype list_len;
+
+    if(l_d.isEmpty())
+    {
+        return;
+    }
+
+    if(x_l_d.isEmpty())
+    {
+        list_len = 0;
+    }
+    else
+    {
+        list_len = x_l_d.begin()->length();
+    }
+
+    foreach(quint32 lambda, x_l_d.keys())
+    {
+        if(l_d.contains(lambda))
+        {
+            x_l_d[lambda].append(l_d.value(lambda));
+        }
+        else
+        {
+            x_l_d[lambda].append(m_invalid_ldata);
+        }
+    }
+
+    foreach(quint32 lambda, l_d.keys())
+    {
+        if(!x_l_d.contains(lambda))
+        {
+            QList<quint64> dlist(list_len, m_invalid_ldata);
+            dlist.append(l_d.value(lambda));
+            x_l_d.insert(lambda, dlist);
+        }
+    }
+}
+
+void Chat::display_lambda_data_lines(x_axis_values_t &x_l_d)
+{
+    if(x_l_d.isEmpty())
+    {
+        QString err = "没有可供显示的数据";
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+        QMessageBox::critical(nullptr, "!!!", err);
+        return;
+    }
+
+
+}
 
 void Chat::on_fileVisualButton_clicked()
 {
     QString file_pos;
+    QStringList file_list;
     if(ui->currFileradioButton->isChecked())
     {
         file_pos = m_data_pth_str + "/" + QString(m_txt_dir_rel_name) + "/"
@@ -1102,12 +1184,13 @@ void Chat::on_fileVisualButton_clicked()
             QMessageBox::warning(nullptr, "!!!", "尚未采集数据！");
             return;
         }
+        file_list.append(file_pos);
     }
     else if(ui->otherFileradioButton->isChecked())
     {
         QString fpn = QFileDialog::getOpenFileName(this, tr("请选择文件"),
                                                  QDir::currentPath(),
-                                                 tr("Text Files(*.txt)"));
+                                                 tr(QString("Text Files(*%1)").arg(m_txt_ext).toUtf8().constData()));
         if(fpn.isEmpty())
         {
             return;
@@ -1116,17 +1199,36 @@ void Chat::on_fileVisualButton_clicked()
         {
             file_pos = fpn;
             ui->currFileNameLabel->setText(QFileInfo(fpn).fileName());
+            file_list.append(file_pos);
         }
     }
     else if(ui->currFolderradioButton->isChecked())
     {
         file_pos = m_data_pth_str + "/" + QString(m_txt_dir_rel_name);
+        ui->currFileNameLabel->setText(file_pos);
+
+        /*traverse the dir and get txt file list.*/
+        get_dir_content_fpn_list(file_pos, file_list,
+                                 QDir::Filter::Files, QDir::SortFlag::Name, m_txt_ext);
     }
     else
     {
         QMessageBox::warning(nullptr, "!!!", "请选择显示文件还是文件夹内容");
         return;
     }
+
+    QFile qf;
+    lambda_data_map_t l_d;
+    foreach(const QString &s, file_list)
+    {
+        qf.setFileName(s);
+        draw_data_from_file(qf, l_d);
+        add_lambda_data_map(l_d, m_x_axis_values);
+    }
+
+    display_lambda_data_lines(m_x_axis_values);
+    return;
+
     QStringList parms;
     parms.append(file_pos);
 

@@ -4,14 +4,21 @@
 #include <QByteArray>
 #include <QString>
 #include <QDateTime>
+#include <QDir>
+#include <QStringList>
 
 QString QByteHexString(const QByteArray &qba, const QString sep = QString(" "));
+QByteArray hex_str_to_byte_array(QString &str);
 QString diy_curr_date_time_str_ms(bool with_ms = true);
 quint8 diy_crc8_8540(const QByteArray &data, int len);
 quint8 diy_crc8_8210(const QByteArray &data, int len);
 bool is_mac_address(QString mac);
 bool is_full_uuid(QString uuid);
 bool mkpth_if_not_exists(QString &pth_str);
+void get_dir_content_fpn_list(QString &path, QStringList &result,
+                              QDir::Filter filter_f = QDir::Filter::NoFilter,
+                              QDir::SortFlag sort_f = QDir::SortFlag::Name,
+                              QString ext_name = "");
 
 #define DIY_SIZE_OF_ARRAY(arr) (sizeof(arr)/sizeof((arr)[0]))
 
