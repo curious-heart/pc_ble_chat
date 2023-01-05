@@ -240,7 +240,7 @@ private:
     x_axis_values_t m_x_axis_values;
     void draw_data_from_file(QFile &txt_f, lambda_data_map_t &l_d);
     void add_lambda_data_map(lambda_data_map_t &l_d, x_axis_values_t &x_l_d);
-    void display_lambda_data_lines(x_axis_values_t &x_l_d);
+    void display_lambda_data_lines(x_axis_values_t &x_l_d, QString save_pth = "");
 
 protected:
     void closeEvent(QCloseEvent * event);

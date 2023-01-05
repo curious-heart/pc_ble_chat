@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>522</width>
-    <height>551</height>
+    <height>552</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -727,21 +727,21 @@
         <item>
          <widget class="QPushButton" name="fileVisualButton">
           <property name="text">
-           <string>可视化显示数据</string>
+           <string>可视化显示</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QRadioButton" name="currFileradioButton">
           <property name="text">
-           <string>最新采集的文件</string>
+           <string>最新采集的数据</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QRadioButton" name="currFolderradioButton">
           <property name="text">
-           <string>文件夹内所有数据</string>
+           <string>当前位置所有数据</string>
           </property>
          </widget>
         </item>
@@ -749,6 +749,13 @@
          <widget class="QRadioButton" name="otherFileradioButton">
           <property name="text">
            <string>其它文件</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QRadioButton" name="otherFolderVisualButton">
+          <property name="text">
+           <string>其它文件夹</string>
           </property>
          </widget>
         </item>
@@ -831,13 +838,13 @@
        </property>
        <property name="font">
         <font>
-         <pointsize>6</pointsize>
+         <pointsize>10</pointsize>
          <italic>false</italic>
          <bold>false</bold>
         </font>
        </property>
        <property name="autoFillBackground">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="readOnly">
         <bool>true</bool>

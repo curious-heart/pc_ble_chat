@@ -12,6 +12,7 @@ android: QT += androidextras
 SOURCES = \
     ble_comm_pkt.cpp \
     characteristicinfo.cpp \
+    chart_display_dlg.cpp \
     diy_common_tool.cpp \
     logger.cpp \
     main.cpp \
@@ -26,6 +27,7 @@ SOURCES = \
 HEADERS = \
     ble_comm_pkt.h \
     characteristicinfo.h \
+    chart_display_dlg.h \
     chat.h \
     diy_common_tool.h \
     logger.h \
@@ -37,6 +39,7 @@ HEADERS = \
     types_and_defs.h
 
 FORMS = \
+    chart_display_dlg.ui \
     chat.ui \
     remoteselector.ui
 

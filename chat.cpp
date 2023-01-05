@@ -51,7 +51,6 @@
 #include "chat.h"
 
 #include <QtCore/qdebug.h>
-#include <QMainWindow>
 
 #include <QtBluetooth/qbluetoothdeviceinfo.h>
 #include <QtBluetooth/qbluetoothlocaldevice.h>
@@ -68,6 +67,8 @@
 #include "types_and_defs.h"
 #include "logger.h"
 #include "ble_comm_pkt.h"
+
+#include "chart_display_dlg.h"
 
 #ifdef Q_OS_ANDROID
 #include <QtAndroidExtras/QtAndroid>
@@ -1037,7 +1038,6 @@ void Chat::on_clearButton_clicked()
 void Chat::on_choosePathButton_clicked()
 {
     QString directory = QFileDialog::getExistingDirectory(this,tr("储存位置选择"),QDir::currentPath());
-    directory.replace("\\","/"); //双斜杠转换单斜杠
     if(directory.isEmpty())
     {
         QString hint_str;
@@ -1046,7 +1046,7 @@ void Chat::on_choosePathButton_clicked()
     }
     else
     {
-        qDebug() << "选择完毕！";
+        directory.replace("\\","/"); //双斜杠转换单斜杠
         m_data_pth_str = directory;
         m_all_rec_pth_str = m_data_pth_str + "/" + QString(m_all_rec_dir_rel_name);
         m_txt_pth_str = m_data_pth_str  + "/" + QString(m_txt_dir_rel_name);
@@ -1067,8 +1067,6 @@ void Chat::on_choosePathButton_clicked()
         }
     }
     ui->storePathDisplay->setText(m_data_pth_str);
-    qDebug() << "存储位置：" << directory;
-    qDebug() << "m_data_pth_str：" << m_data_pth_str ;
 }
 
 void Chat::on_allDevcheckBox_stateChanged(int /*arg1*/)
@@ -1112,6 +1110,10 @@ void Chat::draw_data_from_file(QFile &txt_f, lambda_data_map_t &l_d)
      while (!in.atEnd()) {
          line = in.readLine();
          line.remove(" ");
+         if(line.isEmpty())
+         {
+             continue;
+         }
          b_arr = line.toUtf8();//hex_str_to_byte_array(line);
          ble_comm_get_lambda_data_from_pkt(b_arr, lambda, data);
          l_d.insert(lambda, data);
@@ -1160,8 +1162,9 @@ void Chat::add_lambda_data_map(lambda_data_map_t &l_d, x_axis_values_t &x_l_d)
     }
 }
 
-void Chat::display_lambda_data_lines(x_axis_values_t &x_l_d)
+void Chat::display_lambda_data_lines(x_axis_values_t &x_l_d, QString save_pth)
 {
+    ChartDisplayDlg display_dlg(save_pth);
     QString err;
     if(x_l_d.isEmpty())
     {
@@ -1171,16 +1174,26 @@ void Chat::display_lambda_data_lines(x_axis_values_t &x_l_d)
         return;
     }
 
-    QList<QLineSeries*> line_series_list;
-    bool same = true;
-    qsizetype list_len = x_l_d.begin().value().length();
+    qsizetype series_count = x_l_d.begin().value().length();
+    quint64 d_min = m_invalid_ldata, d_max = 0, c_m;
     foreach(const QList<quint64> &l, x_l_d)
     {
-        if(l.length() != list_len)
+        if(l.length() != series_count)
         {
-            same = false;
-            break;
+            err = "内部数据系列构造错误：各波段列表长度不一致！";
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+            QMessageBox::critical(nullptr, "!!!", err);
+            return;
         }
+        c_m = *std::min_element(l.begin(), l.end());
+        if(c_m < d_min) d_min = c_m;
+        c_m = *std::max_element(l.begin(), l.end());
+        if(c_m > d_max) d_max = c_m;
+    }
+
+    QList<QLineSeries*> line_series_list;
+    for(int i = 0; i < series_count; i++)
+    {
         QLineSeries * l_s = new QLineSeries();
         if(nullptr == l_s)
         {
@@ -1193,35 +1206,51 @@ void Chat::display_lambda_data_lines(x_axis_values_t &x_l_d)
             return;
         }
         line_series_list.append(l_s);
-    }
-    if(!same)
-    {
-        qDeleteAll(line_series_list);
-        line_series_list.clear();
-
-        err = "内部数据系列构造错误：各波段列表长度不一致！";
-        DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
-        QMessageBox::critical(nullptr, "!!!", err);
-        return;
+        l_s->setPointsVisible();
+        l_s->setPointLabelsFormat("@yPoint");
+        l_s->setPointLabelsVisible();
     }
 
     QStringList x_axis_tick_list;
     x_axis_values_t::iterator x_axis_it = x_l_d.begin();
     int x_val = 0;
-    quint64 d_min = m_invalid_ldata, d_max = 0, cur_d;
+    quint64 cur_d;
     while(x_axis_it != x_l_d.end())
     {
         /*for x axis generation*/
         x_axis_tick_list.append(QString::number(x_axis_it.key()));
 
         /*generate line series*/
-        for(int i = 0; i < line_series_list.length(); i++)
+        for(int i = 0; i < series_count; i++)
         {
             cur_d = x_axis_it.value().value(i);
-            line_series_list[i]->append(QPoint(x_val, cur_d));
 
-            if(cur_d < d_min) d_min = cur_d;
-            if(cur_d > d_max && cur_d != m_invalid_ldata) d_max = cur_d;
+            if(m_invalid_ldata == cur_d)
+            {
+                line_series_list[i]->append(QPointF(x_val, 0));
+                line_series_list[i]->setPointConfiguration(x_val,
+                                                   QXYSeries::PointConfiguration::Visibility,
+                                                   false);
+                line_series_list[i]->setPointConfiguration(x_val,
+                                                   QXYSeries::PointConfiguration::LabelVisibility,
+                                                   false);
+            }
+            else
+            {
+                line_series_list[i]->append(QPointF(x_val, cur_d));
+                if(series_count > 1)
+                {
+                    if(d_min < cur_d && cur_d < d_max)
+                    {
+                        line_series_list[i]->setPointConfiguration(x_val,
+                                                           QXYSeries::PointConfiguration::Visibility,
+                                                           false);
+                        line_series_list[i]->setPointConfiguration(x_val,
+                                                           QXYSeries::PointConfiguration::LabelVisibility,
+                                                           false);
+                    }
+                }
+            }
         }
 
         ++x_val;
@@ -1229,33 +1258,43 @@ void Chat::display_lambda_data_lines(x_axis_values_t &x_l_d)
     }
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
     axisX->append(x_axis_tick_list);
+    axisX->setGridLineVisible(false);
     QValueAxis *axisY = new QValueAxis();
-    axisY->setRange(d_min, d_max + 1);
+    axisY->setRange(d_min, d_max * 1.1);
+    axisY->setGridLineVisible(false);
 
     QChart * chart = new QChart();
     chart->addAxis(axisX, Qt::AlignBottom);
     chart->addAxis(axisY, Qt::AlignLeft);
     foreach(QLineSeries * l_s, line_series_list)
     {
+        chart->addSeries(l_s);
         l_s->attachAxis(axisX);
         l_s->attachAxis(axisY);
-
-        chart->addSeries(l_s);
     }
-    QChartView * chartView = new QChartView(chart);
+    chart->legend()->setVisible(false);
+
+    QChartView * chartView = new QChartView(chart, &display_dlg);
     chartView->setRenderHint(QPainter::Antialiasing);
 
-    chartView->show();
+    display_dlg.arrange_gv_display(chartView);
+
+    display_dlg.exec();
+
+    /* Do not need to free resource explicitly. Since they all are child/grand-child
+     * of display_dlg, the latter will release these resource when destructed.
+    */
 }
 
 void Chat::on_fileVisualButton_clicked()
 {
-    QString file_pos;
+    QString file_pos, path_str;
     QStringList file_list;
     if(ui->currFileradioButton->isChecked())
     {
-        file_pos = m_data_pth_str + "/" + QString(m_txt_dir_rel_name) + "/"
-                + m_curr_file_bn_str + m_txt_ext;
+        path_str = m_data_pth_str + "/" + QString(m_txt_dir_rel_name);
+        file_pos = path_str + "/" + m_curr_file_bn_str + m_txt_ext;
+
         QFile f(file_pos);
         if(!f.exists())
         {
@@ -1275,6 +1314,7 @@ void Chat::on_fileVisualButton_clicked()
         }
         else
         {
+            path_str = QFileInfo(fpn).absolutePath();
             file_pos = fpn;
             ui->currFileNameLabel->setText(QFileInfo(fpn).fileName());
             file_list.append(file_pos);
@@ -1282,12 +1322,33 @@ void Chat::on_fileVisualButton_clicked()
     }
     else if(ui->currFolderradioButton->isChecked())
     {
-        file_pos = m_data_pth_str + "/" + QString(m_txt_dir_rel_name);
-        ui->currFileNameLabel->setText(file_pos);
+        file_pos = m_data_pth_str + "/" + m_txt_dir_rel_name;
+        path_str = file_pos;
 
         /*traverse the dir and get txt file list.*/
         get_dir_content_fpn_list(file_pos, file_list,
                                  QDir::Filter::Files, QDir::SortFlag::Name, m_txt_ext);
+        if(file_pos.isEmpty())
+        {
+            QMessageBox::warning(nullptr, "", "没有找到可供显示的文件");
+            return;
+        }
+    }
+    else if(ui->otherFolderVisualButton->isChecked())
+    {
+        file_pos = QFileDialog::getExistingDirectory(this,tr("选择文件夹"),QDir::currentPath());
+        if(file_pos.isEmpty())
+        {
+            return;
+        }
+        get_dir_content_fpn_list(file_pos, file_list,
+                                 QDir::Filter::Files, QDir::SortFlag::Name, m_txt_ext);
+        if(file_pos.isEmpty())
+        {
+            QMessageBox::warning(nullptr, "", "没有找到可供显示的文件");
+            return;
+        }
+        path_str = file_pos;
     }
     else
     {
@@ -1300,10 +1361,19 @@ void Chat::on_fileVisualButton_clicked()
     foreach(const QString &s, file_list)
     {
         qf.setFileName(s);
+        l_d.clear();
         draw_data_from_file(qf, l_d);
         add_lambda_data_map(l_d, m_x_axis_values);
     }
-    display_lambda_data_lines(m_x_axis_values);
+    display_lambda_data_lines(m_x_axis_values, path_str);
+
+    x_axis_values_t::iterator x_axis_it = m_x_axis_values.begin();
+    while(m_x_axis_values.end() != x_axis_it)
+    {
+        x_axis_it.value().clear();
+        ++x_axis_it;
+    }
+    m_x_axis_values.clear();
 
     return;
 

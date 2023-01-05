@@ -63,7 +63,7 @@ bool ble_comm_get_lambda_data_from_pkt(QByteArray &qba, quint32 &lambda, quint64
         return false;
     }
 
-    lambda = QByteArray(&qba[ORID_LAMBDA_POS_START * 2], ORID_LAMBDA_BYTES_NUM * 2).toUInt();
+    lambda = QByteArray(&qba[ORID_LAMBDA_POS_START * 2], ORID_LAMBDA_BYTES_NUM * 2).toUInt(nullptr, 16);
     data = QByteArray(&qba[ORID_DATA_POS_START * 2], ORID_DATA_BYTES_NUM * 2).toULongLong(nullptr, 16);
 
     return true;
