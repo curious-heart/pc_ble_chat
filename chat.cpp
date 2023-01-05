@@ -51,17 +51,19 @@
 #include "chat.h"
 
 #include <QtCore/qdebug.h>
+#include <QMainWindow>
 
 #include <QtBluetooth/qbluetoothdeviceinfo.h>
 #include <QtBluetooth/qbluetoothlocaldevice.h>
 #include <QtBluetooth/qbluetoothuuid.h>
 #include <QMessageBox>
 
-#include <QtCharts/QChartView>
-#include <QtCharts/QLineSeries>
-#include <QtCharts/QLegend>
-#include <QtCharts/QBarCategoryAxis>
-#include <QtCharts/QValueAxis>
+#include <QChart>
+#include <QChartView>
+#include <QLineSeries>
+#include <QLegend>
+#include <QBarCategoryAxis>
+#include <QValueAxis>
 
 #include "types_and_defs.h"
 #include "logger.h"
@@ -1110,10 +1112,11 @@ void Chat::draw_data_from_file(QFile &txt_f, lambda_data_map_t &l_d)
      while (!in.atEnd()) {
          line = in.readLine();
          line.remove(" ");
-         b_arr = hex_str_to_byte_array(line);
+         b_arr = line.toUtf8();//hex_str_to_byte_array(line);
          ble_comm_get_lambda_data_from_pkt(b_arr, lambda, data);
          l_d.insert(lambda, data);
      }
+     txt_f.close();
 }
 
 void Chat::add_lambda_data_map(lambda_data_map_t &l_d, x_axis_values_t &x_l_d)
@@ -1159,15 +1162,90 @@ void Chat::add_lambda_data_map(lambda_data_map_t &l_d, x_axis_values_t &x_l_d)
 
 void Chat::display_lambda_data_lines(x_axis_values_t &x_l_d)
 {
+    QString err;
     if(x_l_d.isEmpty())
     {
-        QString err = "没有可供显示的数据";
+        err = "没有可供显示的数据！";
         DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
         QMessageBox::critical(nullptr, "!!!", err);
         return;
     }
 
+    QList<QLineSeries*> line_series_list;
+    bool same = true;
+    qsizetype list_len = x_l_d.begin().value().length();
+    foreach(const QList<quint64> &l, x_l_d)
+    {
+        if(l.length() != list_len)
+        {
+            same = false;
+            break;
+        }
+        QLineSeries * l_s = new QLineSeries();
+        if(nullptr == l_s)
+        {
+            qDeleteAll(line_series_list);
+            line_series_list.clear();
 
+            err = "创建LineSeries失败！";
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+            QMessageBox::critical(nullptr, "!!!", err);
+            return;
+        }
+        line_series_list.append(l_s);
+    }
+    if(!same)
+    {
+        qDeleteAll(line_series_list);
+        line_series_list.clear();
+
+        err = "内部数据系列构造错误：各波段列表长度不一致！";
+        DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+        QMessageBox::critical(nullptr, "!!!", err);
+        return;
+    }
+
+    QStringList x_axis_tick_list;
+    x_axis_values_t::iterator x_axis_it = x_l_d.begin();
+    int x_val = 0;
+    quint64 d_min = m_invalid_ldata, d_max = 0, cur_d;
+    while(x_axis_it != x_l_d.end())
+    {
+        /*for x axis generation*/
+        x_axis_tick_list.append(QString::number(x_axis_it.key()));
+
+        /*generate line series*/
+        for(int i = 0; i < line_series_list.length(); i++)
+        {
+            cur_d = x_axis_it.value().value(i);
+            line_series_list[i]->append(QPoint(x_val, cur_d));
+
+            if(cur_d < d_min) d_min = cur_d;
+            if(cur_d > d_max && cur_d != m_invalid_ldata) d_max = cur_d;
+        }
+
+        ++x_val;
+        ++x_axis_it;
+    }
+    QBarCategoryAxis *axisX = new QBarCategoryAxis();
+    axisX->append(x_axis_tick_list);
+    QValueAxis *axisY = new QValueAxis();
+    axisY->setRange(d_min, d_max + 1);
+
+    QChart * chart = new QChart();
+    chart->addAxis(axisX, Qt::AlignBottom);
+    chart->addAxis(axisY, Qt::AlignLeft);
+    foreach(QLineSeries * l_s, line_series_list)
+    {
+        l_s->attachAxis(axisX);
+        l_s->attachAxis(axisY);
+
+        chart->addSeries(l_s);
+    }
+    QChartView * chartView = new QChartView(chart);
+    chartView->setRenderHint(QPainter::Antialiasing);
+
+    chartView->show();
 }
 
 void Chat::on_fileVisualButton_clicked()
@@ -1225,10 +1303,14 @@ void Chat::on_fileVisualButton_clicked()
         draw_data_from_file(qf, l_d);
         add_lambda_data_map(l_d, m_x_axis_values);
     }
-
     display_lambda_data_lines(m_x_axis_values);
+
     return;
 
+    /* The following code uses external python program to display. Now
+     * we use Qt internal function, so these are not used.
+    */
+    /*
     QStringList parms;
     parms.append(file_pos);
 
@@ -1260,6 +1342,7 @@ void Chat::on_fileVisualButton_clicked()
     {
         QMessageBox::critical(nullptr, "！！！", "显示失败……");
     }
+    */
 }
 
 

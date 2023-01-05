@@ -2,7 +2,7 @@ TEMPLATE = app
 #TARGET = btchat
 TARGET = skin_data_collector
 
-QT = core bluetooth widgets sql xml
+QT = core bluetooth widgets sql xml charts
 greaterThan(QT_MAJOR_VERSION, 5){
     QT += core5compat
 }
