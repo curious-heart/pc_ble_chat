@@ -28,13 +28,13 @@ SqlDbRemoteWorker::~SqlDbRemoteWorker()
 bool SqlDbRemoteWorker::prepare_rdb(setting_rdb_info_t db_info, QString safe_ldb_dir_str,
                                     QString safe_ldb_file_str)
 {
+    m_safe_ldb_dir_str = safe_ldb_dir_str;
+    m_safe_ldb_file_str =  safe_ldb_file_str;
     if(!m_remote_db_ready)
     {
         QSqlError sql_err;
         QString sqlerr_str;
 
-        m_safe_ldb_dir_str = safe_ldb_dir_str;
-        m_safe_ldb_file_str =  safe_ldb_file_str;
         while(true)
         {
             QSqlDatabase remote_db;
@@ -110,6 +110,7 @@ bool SqlDbRemoteWorker::write_rdb(SkinDatabase::db_info_intf_t intf,
     prepare_rdb(rdb_info, safe_ldb_dir_str, safe_ldb_file_str);
     if(m_remote_db_ready)
     {
+        DIY_LOG(LOG_LEVEL::LOG_INFO, "Begin to write remote db...");
         QSqlDatabase remote_db;
 
         remote_db = QSqlDatabase::database(REMOTE_DB_CONN_NAME);
@@ -120,7 +121,11 @@ bool SqlDbRemoteWorker::write_rdb(SkinDatabase::db_info_intf_t intf,
                                             m_safe_ldb_ready, ret_ind);
         if(!ret)
         {
-            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Write remote error!");
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "Write remote db error!");
+        }
+        else
+        {
+            DIY_LOG(LOG_LEVEL::LOG_INFO, "Write remote db finished.");
         }
     }
     else
