@@ -1,39 +1,101 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--说明
-    <ble_dev_list> 如果最终所有<dev>都不可用，则会使用APP软件内置默认的device信息。
+    <ble_dev_list>
+	    [如果最终所有dev都不可用，则会使用APP软件内置默认的device信息。]
 	<dev>
-	    <dev_type>original_dev</dev_type> 可选。如果不指定，APP软件会请用户设置或自动生成。
-	    <addr>27:A5:D2:1E:67:DD</addr> 必须存在且合法，否则此<dev>会被抛弃。
-	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid> 同<addr>
-	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char> 同<addr>
-	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char> 同<addr>
-	    <light_count>19</light_count> 灯的数量。可选存在。APP内有默认值（参考原始设备）。如果这个值与<light_list>中<light>元素的数量相冲突，则以较大者为准。
-	    <light_list> 灯列表。可以不存在或为空。如果下挂的<light>元素数量与<light_count>相冲突，以较大者为准。
-    注：一个<light>表示APP软件向device下发一条“点亮”的指令。因此<light>中的<idx>可以重复，表示多次点亮同一个灯。如果<light>元素数量少于<light_count>，多出来的light的idx会以指定的最大的idx+1开始向后递增。
-		<light> 可以不存在。如果存在，必须包含合法的idx元素。
-		    <idx>1</idx> 设备内部对灯的编号。编号从1开始。可以重复。不存在或非法值会被视为1。
-		    <flash_period>500</flash_period> 一个灯点亮的时长(ms)。可以不存在或非法，此时会使用默认值。
-		    <flash_gap>10</flash_gap> 一个灯熄灭后到下一个灯点亮的时间间隔(ms)。同<flash_period>
-		    <lambda>354</lambda>  波长(nm)。可选存在。非法值视为0。暂未使用。
+	    <dev_type>original_dev</dev_type>
+		    [可选。如果不指定，会视为clone_dev。]
+	    <addr>27:A5:D2:1E:67:DD</addr>
+		    [必须存在且合法，否则此dev会被抛弃。]
+	    <srv_uuid>6e400001-b5a3-f393-e0a9-e50e24dcca9e</srv_uuid>
+		    [必须存在且合法，否则此dev会被抛弃。]
+	    <rx_char>6e400003-b5a3-f393-e0a9-e50e24dcca9e</rx_char>
+		    [必须存在且合法，否则此dev会被抛弃。]
+	    <tx_char>6e400002-b5a3-f393-e0a9-e50e24dcca9e</tx_char>
+		    [必须存在且合法，否则此dev会被抛弃。]
+	    <light_count>19</light_count>
+		    [灯的数量。可选存在。APP内有默认值（参考原始设备）。
+		    如果这个值与light_list中light元素的数量相冲突，则以较大者为准。处理方式如下：
+		    如果light_count较大，APP内会生成一系列空的light元素，其中各元素均取默认值，lambda设为0；
+		    如果light_list中元素更多，会直接将light_count的值取为light元素的个数。 ]
+	    <light_list>
+		    [灯列表。可以不存在或为空，此时使用APP内默认值（参考原始设备）。
+		    如果下挂的light元素数量与light_count相冲突，以较大者为准。参考上文light_count中的描述。
+		<light>
+			[如果为空，则会被忽略。
+			一个light表示APP软件自动/批量采集数据时，向device下发一条“点亮”的指令。
+			因此light中的idx可以重复，表示多次点亮同一个灯。
+			如果light元素数量少于light_count，多出来的light的idx会从前一个显式指定的值+1递增。
+			如果没有任何light包含合法的idx，则会idx会从1开始递增。 ]
+		    <idx>1</idx>
+			    [设备内部对灯的编号。编号从1开始。可以重复。
+			    不存在或非法值会被APP自动生成，参考上文对light的说明。
+			    它决定了APP下发给设备的序号，即APP希望点亮哪个灯。
+		    <flash_period>500</flash_period>
+			    [一个灯点亮的时长(ms)。可以不存在或非法，此时会使用默认值。]
+		    <flash_gap>10</flash_gap>
+			    [一个灯熄灭后到下一个灯点亮的时间间隔(ms)。可以不存在或非法，此时会使用默认值。]
+			    [flash_period和flash_gap目前仅用于检查single_light_wait_time，暂无其它用途。]
+		    <lambda>354</lambda>
+			    [波长(nm)。可选存在。非法值视为0。
+			    从设备读取到的数据中会包含波长值，但有时设备返回的数据不正确，APP会用这里配置的值
+			    替代设备返回的值。如果这里不设置，或者设置为非法值或0，则APP使用设备返回的波长值；
+			    否则使用这里的值。]
 		</light>
 	    </light_list>
-	    等待一个灯的数据的最长时间（ms）。可选。APP软件内部有默认值。如果设置，应该比max(flash_period + flash_gap)*2要大，否则会强制设置为这个值。
 	    <single_light_wait_time>1000</single_light_wait_time> 
-    </dev>
+		    [等待一个灯的数据的最长时间（ms）。可选。APP软件内部有默认值。如果设置，
+		    应该比max(flash_period + flash_gap)*2要大，否则会强制设置为这个值。]
+	    <dev_lambda_corr>
+		    [波长校正。如果reverse为“no”（默认），则左边的波长值会被替换为右边；如果为“yes”则反向替换。
+		    从设备读取到的数据中的波长信息，（如果lambda存在，）会先使用lambda值替换；
+		    之后再使用这里列表中的值替换。
+		    一个设备如果其dev中包含dev_lambda_corr，则使用这个表校正；否则使用global_lambda_corr校正。
+		    这里的校正影响最终保存/写入数据库中数据的lambda值。]
+		<reverse>no</reverse>
+		<lambda_corr>354,210</lambda_corr>
+		<lambda_corr>376,354</lambda_corr>
+	    </dev_lambda_corr>
+	</dev>
     </ble_dev_list>
 
-    <db_info> 如果不存在或信息不合法，会使用APP软件内置默认的信息。
-	<srvr_addr>li371359001.vicp.net</srvr_addr> 必须存在，否则<db_info>会被抛弃。
-	<srvr_port>3306</srvr_port> 同<srvr_addr>
-	<dbms_name>MySQL</dbms_name> 可选。
-	<dbms_ver>5.7.26</dbms_ver>可选。
-	<db_name>detector</db_name> 同<srvr_addr>
-	<login_id>admin</login_id> 可选。
-	<login_pwd>admin123</login_pwd> 可选。
+    <db_info>
+		[远程数据库信息。如果不存在或信息不合法，会使用APP软件内置默认的信息。]
+	<srvr_addr>li371359001.vicp.net</srvr_addr>
+		[必须存在，否则db_info会被抛弃。]
+	<srvr_port>3306</srvr_port>
+		[必须存在，否则db_info会被抛弃。]
+	<dbms_name>MySQL</dbms_name>
+		[可选。]
+	<dbms_ver>5.7.26</dbms_ver>
+		[可选。]
+	<db_name>detector</db_name>
+		[必须存在，否则db_info会被抛弃。]
+	<login_id>admin</login_id>
+		[可选。]
+	<login_pwd>admin123</login_pwd>
+		[可选。]
     </db_info>
 
-    <oth_settings> 如果不存在或信息不合法，会使用APP软件内置默认的信息。
-	<use_remote_db>1</use_remote_db> 可选。
+    <oth_settings>
+	    [其它设置信息。如果不存在或信息不合法，会使用APP软件内置默认的信息。]
+	<use_remote_db>1</use_remote_db>
+		[是否使用远程数据库。0/1分别表示“不使用”和“使用”。可选，不指定时为1。]
+	<global_lambda_corr>
+		[参考上文dev_lambda_corr中的描述。]
+	    <reverse>no</reverse>
+	    <lambda_corr>254,354</lambda_corr>
+	    <lambda_corr>275,376</lambda_corr>
+	    <lambda_corr>750,705</lambda_corr>
+	</global_lambda_corr>
+	<visual_lambda_corr>
+		[包含的各元素含义参考上文dev_lambda_corr中的描述。这里的波长校正在数据可视化显示时使用：
+		从txt文件中读取到的波长，会使用这个表校正。]
+	    <reverse>no</reverse>
+	    <lambda_corr>254,354</lambda_corr>
+	    <lambda_corr>275,376</lambda_corr>
+	    <lambda_corr>750,705</lambda_corr>
+	</visual_lambda_corr>
     </oth_settings>
 -->
 
@@ -137,6 +199,28 @@
 		</light>
 	    </light_list>
 	    <single_light_wait_time>1500</single_light_wait_time>
+	    <dev_lambda_corr>
+		<reverse>no</reverse>
+		<lambda_corr>354,210</lambda_corr>
+		<lambda_corr>376,354</lambda_corr>
+		<lambda_corr>405,376</lambda_corr>
+		<lambda_corr>450,405</lambda_corr>
+		<lambda_corr>505,450</lambda_corr>
+		<lambda_corr>560,505</lambda_corr>
+		<lambda_corr>600,560</lambda_corr>
+		<lambda_corr>645,600</lambda_corr>
+		<lambda_corr>680,645</lambda_corr>
+		<lambda_corr>705,680</lambda_corr>
+		<lambda_corr>800,705</lambda_corr>
+		<lambda_corr>850,800</lambda_corr>
+		<lambda_corr>910,850</lambda_corr>
+		<lambda_corr>930,910</lambda_corr>
+		<lambda_corr>970,930</lambda_corr>
+		<lambda_corr>1000,970</lambda_corr>
+		<lambda_corr>1050,1070</lambda_corr>
+		<lambda_corr>1070,1200</lambda_corr>
+		<lambda_corr>1200,1300</lambda_corr>
+	     </dev_lambda_corr>
 	</dev>
 	<dev>
 	    <dev_type>clone_dev</dev_type>
@@ -210,5 +294,17 @@
     <oth_settings>
 	<!-- 1: yes, 0: no -->
 	<use_remote_db>1</use_remote_db>
+	<global_lambda_corr>
+	    <reverse>no</reverse>
+	    <lambda_corr>254,354</lambda_corr>
+	    <lambda_corr>275,376</lambda_corr>
+	    <lambda_corr>750,705</lambda_corr>
+	</global_lambda_corr>
+	<visual_lambda_corr>
+	    <reverse>no</reverse>
+	    <lambda_corr>254,354</lambda_corr>
+	    <lambda_corr>275,376</lambda_corr>
+	    <lambda_corr>750,705</lambda_corr>
+	</visual_lambda_corr>
     </oth_settings>
 </cfg_info>

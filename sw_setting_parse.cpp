@@ -37,6 +37,14 @@ static inline QString login_pwd_elem() { return QStringLiteral("login_pwd");}
 static inline QString oth_settings_elem() { return QStringLiteral("oth_settings");}
 static inline QString use_remote_db_elem() { return QStringLiteral("use_remote_db");}
 
+static inline QString global_lambda_corr_elem() { return QStringLiteral("global_lambda_corr");}
+static inline QString visual_lambda_corr_elem() { return QStringLiteral("visual_lambda_corr");}
+static inline QString dev_lambda_corr_elem() { return QStringLiteral("dev_lambda_corr");}
+static inline QString lambda_corr_elem() { return QStringLiteral("lambda_corr");}
+static inline QString reverse_elem() { return QStringLiteral("reverse");}
+static inline QString no_elem_value() { return QStringLiteral("no");}
+static inline QString yes_elem_value() { return QStringLiteral("yes");}
+
 typedef bool (*parser_t)(QDomElement &n, sw_settings_t &loaded, bool &valid_e);
 typedef QMap<QString, parser_t> str_parser_map_t;
 static bool check_setting_device_info(setting_ble_dev_info_t &dev_info)
@@ -84,6 +92,95 @@ static bool check_setting_db_info(setting_rdb_info_t &db_info)
     }
     db_info.log_print();
     return ret;
+}
+
+static bool parse_lambda_corr(QDomElement &e, QMap<quint32, quint32>& corr_map, bool one_to_one = false)
+{
+    QMap<quint32, quint32> assit_map;
+    bool reverse = false, ok;
+    QString val_text, tag_name;
+    QStringList lambda_pair;
+    QString err;
+    quint32 l1, l2;
+    QDomElement corr_e = e.firstChildElement();
+    while(!corr_e.isNull())
+    {
+        tag_name = corr_e.tagName();
+        while(true)
+        {
+            if(lambda_corr_elem() == tag_name)
+            {
+                val_text = corr_e.text();
+                val_text.remove(" ");
+                lambda_pair = val_text.split(",");
+                if(lambda_pair.length() != 2)
+                {
+                    err = QString("Invalid lambda pair: %1. It should be seperated by comma. Ignored.")
+                            .arg(corr_e.text());
+                    DIY_LOG(LOG_LEVEL::LOG_WARN, "%ls", err.utf16());
+                    break;
+                }
+                err = QString("Invalid lambda pair: %1. It should contain only digits. Ignored.")
+                        .arg(corr_e.text());
+                l1 = lambda_pair[0].toUInt(&ok);
+                if(!ok)
+                {
+                    DIY_LOG(LOG_LEVEL::LOG_WARN, "%ls", err.utf16());
+                    break;
+                }
+                l2 = lambda_pair[1].toUInt(&ok);
+                if(!ok)
+                {
+                    DIY_LOG(LOG_LEVEL::LOG_WARN, "%ls", err.utf16());
+                    break;
+                }
+                corr_map.insert(l1, l2);
+                assit_map.insert(l2, l1);
+                break;
+            }
+            else if(reverse_elem() == tag_name)
+            {
+                val_text = corr_e.text();
+                if(yes_elem_value() == val_text)
+                {
+                    reverse = true;
+                }
+                //else assuming "no"
+                break;
+            }
+            else
+            {
+                err = QString("Invalid tag name under %1:%2, ignored").arg(e.tagName(),
+                                                                                  tag_name);
+                DIY_LOG(LOG_LEVEL::LOG_WARN, "%ls", err.utf16());
+                break;
+            }
+        }
+        corr_e = corr_e.nextSiblingElement();
+    }
+    if(!corr_map.isEmpty())
+    {
+        if(reverse)
+        {
+            corr_map = assit_map;
+        }
+        if(one_to_one)
+        {
+            assit_map.clear();
+            for(quint32 k: corr_map.keys())
+            {
+                if(assit_map.contains(corr_map[k]))
+                {
+                    assit_map.remove(k);
+                }
+                else
+                {
+                    assit_map.insert(corr_map[k], k);
+                }
+            }
+        }
+    }
+    return true;
 }
 
 static bool parse_light_list(QDomElement &e, light_list_t & light_list, bool &valid)
@@ -324,6 +421,10 @@ static bool parse_dev_list(QDomElement &e, sw_settings_t &loaded, bool &valid_e)
                         valid_e = false;
                     }
                 }
+                else if(dev_lambda_corr_elem() == info_e.tagName())
+                {
+                    parse_lambda_corr(info_e, dev_info->dev_lambda_corr);
+                }
                 else
                 {
                     DIY_LOG(LOG_LEVEL::LOG_INFO,
@@ -447,6 +548,14 @@ static bool parse_oth_settings(QDomElement &e, sw_settings_t &loaded, bool &vali
         if(info_e.tagName() == use_remote_db_elem())
         {
             loaded.oth_settings.use_remote_db = (bool)(info_e.text().toInt());
+        }
+        else if(global_lambda_corr_elem() == info_e.tagName())
+        {
+            parse_lambda_corr(info_e, loaded.oth_settings.global_lambda_corr);
+        }
+        else if(visual_lambda_corr_elem() == info_e.tagName())
+        {
+            parse_lambda_corr(info_e, loaded.oth_settings.visual_lambda_corr, true);
         }
         else
         {

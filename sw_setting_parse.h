@@ -27,6 +27,7 @@ public:
     int light_cnt;
     light_list_t light_list;
     int single_light_wait_time;
+    QMap<quint32, quint32> dev_lambda_corr;
 
     _ble_dev_info_t()
     {
@@ -47,6 +48,7 @@ public:
         clear_light_list();
         single_light_wait_time = 0;
         light_cnt = 0;
+        dev_lambda_corr.clear();
     }
     void log_print()
     {
@@ -73,6 +75,9 @@ typedef class _oth_settings_t
 {
 public:
     bool use_remote_db;
+    QMap<quint32, quint32> global_lambda_corr;
+    QMap<quint32, quint32> visual_lambda_corr;
+
     _oth_settings_t()
     {
         clear();
@@ -84,6 +89,8 @@ public:
     void clear()
     {
         use_remote_db = true;
+        global_lambda_corr.clear();
+        visual_lambda_corr.clear();
     }
     void log_print()
     {
@@ -114,6 +121,8 @@ public:
             ++it;
         }
         ble_dev_list.clear();
+        db_info.clear();
+        oth_settings.clear();
     }
 }sw_settings_t;
 

@@ -766,6 +766,7 @@ void Chat::BleServiceCharacteristicChanged(const QLowEnergyCharacteristic &c,
         {
             ld.lambda = lambda_value.toUInt(nullptr, 16);
         }
+        ld.lambda = lambda_correction(ld.lambda);
         ld.data = data.toULongLong(nullptr, 16);
         m_db_data.lambda_data.append(ld);
         val_p_prf.prepend("***");
@@ -1094,7 +1095,7 @@ void Chat::on_onlyValidDatacheckBox_stateChanged(int /*arg1*/)
     }
 }
 
-void Chat::draw_data_from_file(QFile &txt_f, lambda_data_map_t &l_d)
+void Chat::draw_data_from_file(QFile &txt_f, lambda_data_map_t &l_d, bool visual_lambda_map)
 {
      if(!txt_f.open(QIODevice::ReadOnly | QIODevice::Text))
      {
@@ -1116,6 +1117,11 @@ void Chat::draw_data_from_file(QFile &txt_f, lambda_data_map_t &l_d)
          }
          b_arr = line.toUtf8();//hex_str_to_byte_array(line);
          ble_comm_get_lambda_data_from_pkt(b_arr, lambda, data);
+         if(visual_lambda_map)
+         {
+             lambda = lambda_correction(lambda,
+                                        &m_sw_settings.oth_settings.visual_lambda_corr);
+         }
          l_d.insert(lambda, data);
      }
      txt_f.close();
@@ -1662,7 +1668,7 @@ void Chat::upload_safe_ldb_end_handler(QList<SkinDatabase::tbl_rec_op_result_t> 
     show_rdb_wait_box(false);
 
     m_upload_safe_ldb_now = false;
-    QString result_str = QString("Upload result:\n");
+    QString result_str = QString("上传结果：\n");
     int fail_cnt = 0;
 
     foreach(const SkinDatabase::tbl_rec_op_result_t &tbl_ret, op_result)
@@ -1676,19 +1682,19 @@ void Chat::upload_safe_ldb_end_handler(QList<SkinDatabase::tbl_rec_op_result_t> 
     }
     if(0 == fail_cnt)
     {
-        result_str += "All records in safe ldb has been upload to remote db!\n";
+        result_str += "所有记录均已成功上传到服务器！\n";
         if(result_ret)
         {
-            result_str += "And the safe ldb file has been deleted.\n";
+            result_str += "safe ldb文件已删除。\n";
         }
         else
         {
-            result_str += "But fails to delete the safe ldb file. PLease delete it manually.\n";
+            result_str += "但删除safe ldb文件失败。请手动删除。";
         }
     }
-    if(result_ret)
+    else
     {
-        result_str += "Not all records are uploaded to remote db. Please check log file.\n";
+        result_str += "未能成功上传全部记录。请查看log文件。";
     }
     QMessageBox::information(nullptr, "Result", result_str);
 
@@ -1752,5 +1758,32 @@ void Chat::on_uploadLdbPB_clicked()
         m_skin_db->prepare_remote_db();
 
         show_rdb_wait_box(true, "", "Remote db preparing...");
+    }
+}
+
+quint32 Chat::lambda_correction(quint32 lambda, QMap<quint32, quint32>* corr_map)
+{
+    if(nullptr == corr_map)
+    {
+        if(m_work_dev_info && !(m_work_dev_info->dev_lambda_corr.isEmpty()))
+        {
+            corr_map = &(m_work_dev_info->dev_lambda_corr);
+        }
+        else if(!(m_sw_settings.oth_settings.global_lambda_corr.isEmpty()))
+        {
+            corr_map = &(m_sw_settings.oth_settings.global_lambda_corr);
+        }
+        else
+        {
+            return lambda;
+        }
+    }
+    if(corr_map->contains(lambda))
+    {
+        return (*corr_map)[lambda];
+    }
+    else
+    {
+        return lambda;
     }
 }

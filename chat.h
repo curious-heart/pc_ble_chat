@@ -238,9 +238,10 @@ private:
     typedef QMap<quint32, quint64> lambda_data_map_t;
     typedef QMap<quint32, QList<quint64>> x_axis_values_t;
     x_axis_values_t m_x_axis_values;
-    void draw_data_from_file(QFile &txt_f, lambda_data_map_t &l_d);
+    void draw_data_from_file(QFile &txt_f, lambda_data_map_t &l_d, bool visual_lambda_map = true);
     void add_lambda_data_map(lambda_data_map_t &l_d, x_axis_values_t &x_l_d);
     void display_lambda_data_lines(x_axis_values_t &x_l_d, QString save_pth = "");
+    quint32 lambda_correction(quint32 lambda, QMap<quint32, quint32>* corr_map = nullptr);
 
 protected:
     void closeEvent(QCloseEvent * event);
