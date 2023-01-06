@@ -1175,20 +1175,40 @@ void Chat::display_lambda_data_lines(x_axis_values_t &x_l_d, QString save_pth)
     }
 
     qsizetype series_count = x_l_d.begin().value().length();
+    //d_max and d_min record the max and min value of all data, exclude m_invalid_ldata;
     quint64 d_min = m_invalid_ldata, d_max = 0, c_m;
-    foreach(const QList<quint64> &l, x_l_d)
+    //the two lists record the max and min value at each position(lambda), exclude m_invalid_ldata;
+    QList<quint64> point_max_l, point_min_l;
+    x_axis_values_t::iterator x_it = x_l_d.begin();
+    while(x_it != x_l_d.end())
     {
-        if(l.length() != series_count)
+        if(x_it.value().length() != series_count)
         {
             err = "内部数据系列构造错误：各波段列表长度不一致！";
-            DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+            DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls: series_count is %d, one count is %d",
+                    err.utf16(), series_count, x_it.value().length());
             QMessageBox::critical(nullptr, "!!!", err);
             return;
         }
-        c_m = *std::min_element(l.begin(), l.end());
+        /*find min value at this position(lambda)*/
+        c_m = *std::min_element(x_it.value().begin(), x_it.value().end());
+        point_min_l.append(c_m);
         if(c_m < d_min) d_min = c_m;
-        c_m = *std::max_element(l.begin(), l.end());
+        /*find max value at this position(lambda)*/
+        c_m = 0;
+        for(qsizetype i = 0; i < series_count; i++)
+        {
+            quint64 d;
+            d = x_it.value().value(i);
+            if((d != m_invalid_ldata) && (d > c_m))
+            {
+                c_m = d;
+            }
+        }
+        point_max_l.append(c_m);
         if(c_m > d_max) d_max = c_m;
+
+        ++x_it;
     }
 
     QList<QLineSeries*> line_series_list;
@@ -1208,22 +1228,28 @@ void Chat::display_lambda_data_lines(x_axis_values_t &x_l_d, QString save_pth)
         line_series_list.append(l_s);
         l_s->setPointsVisible();
         l_s->setPointLabelsFormat("@yPoint");
-        l_s->setPointLabelsVisible();
+        l_s->setPointLabelsVisible(false);
+    }
+    if(1 == series_count)
+    {
+        line_series_list[0]->setPointLabelsVisible(true);
     }
 
     QStringList x_axis_tick_list;
-    x_axis_values_t::iterator x_axis_it = x_l_d.begin();
+    x_it = x_l_d.begin();
     int x_val = 0;
     quint64 cur_d;
-    while(x_axis_it != x_l_d.end())
+    bool min_displayed, max_displayed;
+    while(x_it != x_l_d.end())
     {
         /*for x axis generation*/
-        x_axis_tick_list.append(QString::number(x_axis_it.key()));
+        x_axis_tick_list.append(QString::number(x_it.key()));
 
         /*generate line series*/
+        min_displayed = max_displayed = false;
         for(int i = 0; i < series_count; i++)
         {
-            cur_d = x_axis_it.value().value(i);
+            cur_d = x_it.value().value(i);
 
             if(m_invalid_ldata == cur_d)
             {
@@ -1240,25 +1266,31 @@ void Chat::display_lambda_data_lines(x_axis_values_t &x_l_d, QString save_pth)
                 line_series_list[i]->append(QPointF(x_val, cur_d));
                 if(series_count > 1)
                 {
-                    if(d_min < cur_d && cur_d < d_max)
+                    if(!max_displayed && (cur_d == point_max_l[x_val]))
                     {
                         line_series_list[i]->setPointConfiguration(x_val,
-                                                           QXYSeries::PointConfiguration::Visibility,
-                                                           false);
+                                                           QXYSeries::PointConfiguration::LabelVisibility,
+                                                           true);
+                        max_displayed = true;
+                    }
+                    if(!min_displayed && (cur_d == point_min_l[x_val]))
+                    {
                         line_series_list[i]->setPointConfiguration(x_val,
                                                            QXYSeries::PointConfiguration::LabelVisibility,
-                                                           false);
+                                                           true);
+                        min_displayed = true;
                     }
                 }
             }
         }
 
         ++x_val;
-        ++x_axis_it;
+        ++x_it;
     }
     QBarCategoryAxis *axisX = new QBarCategoryAxis();
     axisX->append(x_axis_tick_list);
     axisX->setGridLineVisible(false);
+    axisX->setTitleText("波长（nm）");
     QValueAxis *axisY = new QValueAxis();
     axisY->setRange(d_min, d_max * 1.1);
     axisY->setGridLineVisible(false);
