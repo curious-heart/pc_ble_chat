@@ -426,7 +426,7 @@ void SkinDatabase::set_remote_db_info(setting_rdb_info_t * db_info)
 
 void SkinDatabase::set_safe_ldb_for_rdb_fpn(QString safe_ldb_dir, QString safe_ldb_file)
 {
-    emit close_rdb_sig(SkinDatabase::DB_SAFE_LDB);
+    close_dbs(SkinDatabase::DB_SAFE_LDB);
     m_safe_ldb_dir_str = safe_ldb_dir;
     m_safe_ldb_file_str = safe_ldb_file;
 }
@@ -824,7 +824,7 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
     QString sqlerr_str;
     QString name, cmd;
     bool ret = true;
-    bool safe_ldb_prepared = safe_ldb_ready ? (*safe_ldb_ready) : false; //only used in case of db_pos being REMOTE
+    bool safe_ldb_prepared = safe_ldb_ready ? (*safe_ldb_ready) : false; //only used in case of normal write rdb (not upload safe ldb).
 
     tv_name_cmd_map_t insert_tbl_cmds[] =
     {
@@ -864,7 +864,7 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                         {
                             safe_ldb_prepared = prepare_safe_ldb(safe_ldb_pth_str,
                                                          safe_ldb_name_str,
-                                                         name, safe_ldb_conn_name_str);
+                                                         "" /*name*/, safe_ldb_conn_name_str);
                         }
 
                         if(safe_ldb_prepared)
@@ -916,7 +916,7 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                     {
                         safe_ldb_prepared = prepare_safe_ldb(safe_ldb_pth_str,
                                                              safe_ldb_name_str,
-                                                             name, safe_ldb_conn_name_str);
+                                                             "" /*name*/, safe_ldb_conn_name_str);
                     }
 
                     if(safe_ldb_prepared)
@@ -937,9 +937,13 @@ bool SkinDatabase::write_db(QSqlDatabase &qdb, db_info_intf_t &intf,
                                         "Trying to insert safe ldb error!!!");
                             }
                         }
-                        else if(ret_ind)
+                        else
                         {
-                            *ret_ind = (SkinDatabase::db_ind_t)((*ret_ind) | SkinDatabase::DB_SAFE_LDB);
+                            DIY_LOG(LOG_LEVEL::LOG_INFO, "Inser into safe ldb sucessfully.");
+                            if(ret_ind)
+                            {
+                                *ret_ind = (SkinDatabase::db_ind_t)((*ret_ind) | SkinDatabase::DB_SAFE_LDB);
+                            }
                         }
                     }
                 }

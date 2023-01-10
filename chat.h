@@ -224,7 +224,7 @@ private:
     bool m_upload_safe_ldb_now = false;
     void select_safe_ldb_for_upload();
     QMessageBox m_remote_db_wait_box;
-    void show_rdb_wait_box(bool show, QString title = "", QString box_str = "",
+    int show_rdb_wait_box(bool show, QString title = "", QString box_str = "",
                          QMessageBox::StandardButtons buttons = QMessageBox::NoButton);
     typedef enum
     {
@@ -232,7 +232,8 @@ private:
         POP_BTNS
     }chat_push_pop_btn_t;
     void push_pop_data_collection_btns(chat_push_pop_btn_t p_p);
-    void disable_data_collection_btns();
+    void enable_data_collection_btns(bool en = true);
+    void toggle_conn_btn(bool);
 
     const quint64 m_invalid_ldata = (quint64)(-1);
     typedef QMap<quint32, quint64> lambda_data_map_t;

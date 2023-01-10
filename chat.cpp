@@ -63,6 +63,7 @@
 #include <QLegend>
 #include <QBarCategoryAxis>
 #include <QValueAxis>
+#include <QStack>
 
 #include "types_and_defs.h"
 #include "logger.h"
@@ -83,6 +84,9 @@ static const QLatin1String reverseUuid("c8e96402-0102-cf9c-274b-701a950fe1e8");
 #else
 #define BLE_CLIENT_CHAR_CFG (QBluetoothUuid::DescriptorType::ClientCharacteristicConfiguration)
 #endif
+
+static const char* g_force_exit_hint_str_db_continue =
+        "上传远程数据库尚未完成，此时关闭，程序会在后台继续尝试上传，最终结果可在log文件中查看。是否继续？";
 
 Chat::Chat(QWidget *parent)
     : QDialog(parent), ui(new Ui_Chat)
@@ -254,6 +258,8 @@ Chat::~Chat()
         delete m_skin_db;
     }
 
+    show_rdb_wait_box(false);
+
     end_log_thread(m_log_thread);
 }
 
@@ -306,7 +312,7 @@ void Chat::connectClicked()
 
     ui->connectButton->setEnabled(false);
     ui->disconnButton->setEnabled(false);
-    disable_data_collection_btns();
+    enable_data_collection_btns(false);
 
     // scan for services
     /*const QBluetoothAddress adapter = localAdapters.isEmpty() ?
@@ -326,7 +332,6 @@ void Chat::connectClicked()
         QMessageBox::critical(nullptr, "Error!", err);
         DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
         ui->connectButton->setEnabled(true);
-        ui->uploadLdbPB->setEnabled(true);
         return;
     }
     m_remoteSelector->search_all_dev(m_all_dev_scan);
@@ -354,6 +359,9 @@ void Chat::connectClicked()
                 + QString("m_work_dev_info:0x\n") + QString::number((quint64)m_work_dev_info,16);
             QMessageBox::critical(nullptr, "!!!", err);
             DIY_LOG(LOG_LEVEL::LOG_ERROR, "%ls", err.utf16());
+            ui->connectButton->setEnabled(true);
+            ui->disconnButton->setEnabled(false);
+            push_pop_data_collection_btns(Chat::POP_BTNS);
             return;
         }
 
@@ -380,16 +388,14 @@ void Chat::connectClicked()
                 //= m_rx_char->getCharacteristic().descriptors()[0];
                 = m_rx_char->getCharacteristic().descriptor(BLE_CLIENT_CHAR_CFG);
         m_service->service()->writeDescriptor(rx_descp, QByteArray::fromHex("0100"));
-        ui->connectButton->setEnabled(false);
-        ui->disconnButton->setEnabled(true);
-        ui->sendButton->setEnabled(true);
-        ui->uploadLdbPB->setEnabled(true);
-        set_manual_cmd_btn();
-        ui->calibrationButton->setEnabled(true);
+
+        toggle_conn_btn(false);
+        enable_data_collection_btns(true);
     }
     else
     {
-        ui->connectButton->setEnabled(true);
+        toggle_conn_btn(true);
+        enable_data_collection_btns(false);
     }
 }
 //! [Connect to remote service]
@@ -653,7 +659,8 @@ void Chat::start_send_data_to_device(bool single_cmd)
 
         ui->connectButton->setEnabled(false);
         ui->disconnButton->setEnabled(false);
-        disable_data_collection_btns();
+        ui->choosePathButton->setEnabled(false);
+        enable_data_collection_btns(false);
 
         QByteArray bytes_to_send;
         bool gen_pkt_ok;
@@ -902,6 +909,7 @@ void Chat::write_data_done_handle(bool done)
     ui->sendButton->setEnabled(true);
     set_manual_cmd_btn();
     ui->calibrationButton->setEnabled(true);
+    ui->choosePathButton->setEnabled(true);
     m_write_done_timer.stop();
     if(m_file_write_ready)
     {
@@ -938,12 +946,10 @@ void Chat::restart_work()
     m_tx_char = nullptr;
     m_work_dev_info = nullptr;
 
-    ui->sendButton->setEnabled(false);
-    set_manual_cmd_btn();
-    ui->calibrationButton->setEnabled(false);
-    ui->connectButton->setEnabled(true);
-    ui->disconnButton->setEnabled(false);
+    enable_data_collection_btns(false);
     ui->uploadLdbPB->setEnabled(true);
+
+    toggle_conn_btn(true);
 }
 void Chat::on_disconnButton_clicked()
 {
@@ -1492,43 +1498,71 @@ void Chat::on_sendText_textEdited(const QString &/*arg1*/)
     }
 }
 
+void Chat::toggle_conn_btn(bool conn)
+{
+    ui->connectButton->setEnabled(conn);
+    ui->disconnButton->setEnabled(!conn);
+}
+
 void Chat::push_pop_data_collection_btns(chat_push_pop_btn_t p_p)
 {
-    static bool send_btn = ui->sendButton->isEnabled();
-    static bool calib_btn = ui->calibrationButton->isEnabled();
-    static bool manual_btn = ui->manualCmdBtn->isEnabled();
-    static bool upload_btn = ui->uploadLdbPB->isEnabled();
+    typedef struct
+    {
+        bool send_btn;
+        bool calib_btn;
+        bool manual_btn;
+        bool upload_btn;
+    }btn_st_t;
+    static QStack<btn_st_t> btn_stack;
+    btn_st_t btn_sts;
 
     if(PUSH_BTNS == p_p)
     {
-        send_btn = ui->sendButton->isEnabled();
-        calib_btn = ui->calibrationButton->isEnabled();
-        manual_btn = ui->manualCmdBtn->isEnabled();
-        upload_btn = ui->uploadLdbPB->isEnabled();
+        btn_sts =
+        {
+            ui->sendButton->isEnabled(),
+            ui->calibrationButton->isEnabled(),
+            ui->manualCmdBtn->isEnabled(),
+            ui->uploadLdbPB->isEnabled(),
+        };
+        btn_stack.push(btn_sts);
+    }
+    else
+    {//pop
+        if(!btn_stack.isEmpty())
+        {
+            btn_sts = btn_stack.pop();
+            ui->sendButton->setEnabled(btn_sts.send_btn);
+            ui->calibrationButton->setEnabled(btn_sts.calib_btn);
+            ui->manualCmdBtn->setEnabled(btn_sts.manual_btn);
+            ui->uploadLdbPB->setEnabled(btn_sts.upload_btn);
+        }
+    }
+}
+
+void Chat::enable_data_collection_btns(bool en)
+{
+    ui->sendButton->setEnabled(en);
+    ui->calibrationButton->setEnabled(en);
+    if(en)
+    {
+        set_manual_cmd_btn();
     }
     else
     {
-        ui->sendButton->setEnabled(send_btn);
-        ui->calibrationButton->setEnabled(calib_btn);
-        ui->manualCmdBtn->setEnabled(manual_btn);
-        ui->uploadLdbPB->setEnabled(upload_btn);
+        ui->manualCmdBtn->setEnabled(false);
     }
+    ui->uploadLdbPB->setEnabled(en);
 }
 
-void Chat::disable_data_collection_btns()
-{
-    ui->sendButton->setEnabled(false);
-    ui->calibrationButton->setEnabled(false);
-    ui->manualCmdBtn->setEnabled(false);
-    ui->uploadLdbPB->setEnabled(false);
-}
-
-void Chat::show_rdb_wait_box(bool show, QString title, QString box_str,
+int Chat::show_rdb_wait_box(bool show, QString title, QString box_str,
                            QMessageBox::StandardButtons buttons)
 {
+    int ret = QMessageBox::NoButton;
     if(!show)
     {
         m_remote_db_wait_box.hide();
+        return ret;
     }
     else
     {
@@ -1538,6 +1572,11 @@ void Chat::show_rdb_wait_box(bool show, QString title, QString box_str,
         m_remote_db_wait_box.setWindowFlags(Qt::FramelessWindowHint | Qt::CustomizeWindowHint);
         m_remote_db_wait_box.setWindowModality(Qt::NonModal);
         m_remote_db_wait_box.show();
+        if(buttons != QMessageBox::NoButton)
+        {
+            ret = m_remote_db_wait_box.exec();
+        }
+        return ret;
     }
 }
 
@@ -1547,9 +1586,18 @@ void Chat::on_quitButton_clicked()
     {
         if(m_writing_rdb)
         {
-            show_rdb_wait_box(true, "", QString("上传远程数据库尚未完成，请稍等..."),
-                              QMessageBox::StandardButton::Ok);
-            return;
+            int ret;
+            ret = show_rdb_wait_box(true, "", QString(g_force_exit_hint_str_db_continue),
+                              QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No);
+            if(QMessageBox::Yes == ret)
+            {
+                m_skin_db->close_dbs(SkinDatabase::DB_ALL);
+                DIY_LOG(LOG_LEVEL::LOG_INFO, "User force exit: quit button.");
+            }
+            else
+            {
+                return;
+            }
         }
         else
         {
@@ -1570,10 +1618,19 @@ void Chat::closeEvent(QCloseEvent *event)
     {
         if(m_writing_rdb)
         {
-            show_rdb_wait_box(true, "", QString("上传远程数据库尚未完成，请稍等..."),
-                              QMessageBox::StandardButton::Ok);
-            event->ignore();
-            return;
+            int ret;
+            ret = show_rdb_wait_box(true, "", QString(g_force_exit_hint_str_db_continue),
+                              QMessageBox::StandardButton::Yes | QMessageBox::StandardButton::No);
+            if(QMessageBox::Yes == ret)
+            {
+                m_skin_db->close_dbs(SkinDatabase::DB_ALL);
+                DIY_LOG(LOG_LEVEL::LOG_INFO, "User force exit: close event.");
+            }
+            else
+            {
+                event->ignore();
+                return;
+            }
         }
         else
         {
@@ -1603,6 +1660,15 @@ void Chat::rdb_write_done_hanlder(SkinDatabase::db_ind_t write_ind, bool /*ret*/
     show_rdb_wait_box(false);
     if(m_skin_db)
     {
+        /* Here, close all dbs, including remote db and safe ldb.
+         * If just close safe ldb and leave remote db opened, the following case
+         * can't be satisfying:
+         *     step 0: collect data set 0, write rdb ok.
+         *     step 1: collect data set 1, writing rdb fails due to network issue;
+         *     step 2: network is restored.
+         *     step 3: connect dat set 2.
+         * If we do not close rdb here, rdb will not be restored after step 2.
+        */
         m_skin_db->close_dbs(SkinDatabase::DB_ALL);
     }
     if(SkinDatabase::DB_NONE == write_ind)
@@ -1707,6 +1773,7 @@ void Chat::select_safe_ldb_for_upload()
                                              QDir::currentPath(), tr("(*.sqlite)"));
     if(fpn.isEmpty())
     {
+        m_upload_safe_ldb_now = false;
         push_pop_data_collection_btns(Chat::POP_BTNS);
         return;
     }
@@ -1717,7 +1784,7 @@ void Chat::select_safe_ldb_for_upload()
         m_safe_ldb_for_upload_fpn = fpn;
         m_skin_db->upload_safe_ldb(m_safe_ldb_for_upload_fpn);
 
-        show_rdb_wait_box(true, "", "Uploading...");
+        show_rdb_wait_box(true, "", "正在上传，请不要关闭程序...");
     }
 }
 
@@ -1733,7 +1800,7 @@ void Chat::rdb_state_upd_handler(SkinDatabase::rdb_state_t rdb_st)
         else
         {
             QMessageBox::critical(nullptr, "!!!",
-                                  "Remote db is not availabel");
+                                  "远程数据库连接失败");
             push_pop_data_collection_btns(Chat::POP_BTNS);
         }
     }
@@ -1743,11 +1810,11 @@ void Chat::on_uploadLdbPB_clicked()
     if(!m_skin_db)
     {
         QMessageBox::critical(nullptr, "!!!",
-                              "All db function can't work. Please check the log.");
+                              "所有数据库功能均无法工作。请检查log文件。");
         return;
     }
     push_pop_data_collection_btns(Chat::PUSH_BTNS);
-    disable_data_collection_btns();
+    enable_data_collection_btns(false);
     m_upload_safe_ldb_now = true;
     if(m_skin_db->remote_db_st() == SkinDatabase::RDB_ST_OK)
     {
@@ -1757,7 +1824,7 @@ void Chat::on_uploadLdbPB_clicked()
     {
         m_skin_db->prepare_remote_db();
 
-        show_rdb_wait_box(true, "", "Remote db preparing...");
+        show_rdb_wait_box(true, "", "正在连接远程数据库服务器...");
     }
 }
 
